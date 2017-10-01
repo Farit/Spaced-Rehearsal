@@ -34,7 +34,7 @@ class TermColor:
         return cls.coloralize(cls.BOLD, string_to_color)
 
 
-class EngRote:
+class SpacedRehearsal:
 
     def __init__(self):
         self.loop = asyncio.get_event_loop()
@@ -89,5 +89,4 @@ class EngRote:
 
 
 if __name__ == '__main__':
-    engrote = EngRote()
-    engrote.run()
+    SpacedRehearsal().run()
