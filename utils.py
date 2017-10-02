@@ -1,10 +1,11 @@
 
 class TermColor:
-    PURPLE = '\033[35m'
-    BLUE = '\033[34m'
+    RED = '\033[31m'
     GREEN = '\033[32m'
     YELLOW = '\033[33m'
-    RED = '\033[31m'
+    BLUE = '\033[34m'
+    PURPLE = '\033[35m'
+    GREY = '\033[1;30m'
     END = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
@@ -24,6 +25,10 @@ class TermColor:
     @classmethod
     def green(cls, string_to_color):
         return cls.coloralize(cls.GREEN, string_to_color)
+
+    @classmethod
+    def grey(cls, string_to_color):
+        return cls.coloralize(cls.GREY, string_to_color)
 
     @classmethod
     def bold(cls, string_to_color):

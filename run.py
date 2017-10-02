@@ -9,12 +9,13 @@ class SpacedRehearsal:
 
     def __init__(self):
         self.loop = asyncio.get_event_loop()
+        self.login_name = None
         self.set_signal_handler('sigint')
         self.set_signal_handler('sigterm')
 
     def run(self):
         try:
-            self.loop.call_soon(self.choose_action)
+            self.loop.call_soon(self.login)
             self.loop.run_forever()
         finally:
             self.loop.close()
@@ -30,7 +31,12 @@ class SpacedRehearsal:
             'Got signal ', TermColor.bold(f'"{signame}": '),
             TermColor.red('exit')
         )
+        print(TermColor.grey(f'Bye {self.login_name}!'))
         self.loop.stop()
+
+    def login(self):
+        self.login_name = input(TermColor.grey('Login: '))
+        self.loop.call_soon(self.choose_action)
 
     def choose_action(self):
         action = None
