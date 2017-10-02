@@ -2,36 +2,7 @@ import signal
 import asyncio
 import functools
 
-
-class TermColor:
-    PURPLE = '\033[35m'
-    BLUE = '\033[34m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    RED = '\033[31m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-    @classmethod
-    def coloralize(cls, color, string_to_color):
-        return color + string_to_color + cls.END
-
-    @classmethod
-    def red(cls, string_to_color):
-        return cls.coloralize(cls.RED, string_to_color)
-
-    @classmethod
-    def yellow(cls, string_to_color):
-        return cls.coloralize(cls.YELLOW, string_to_color)
-    
-    @classmethod
-    def green(cls, string_to_color):
-        return cls.coloralize(cls.GREEN, string_to_color)
-
-    @classmethod
-    def bold(cls, string_to_color):
-        return cls.coloralize(cls.BOLD, string_to_color)
+from utils import TermColor
 
 
 class SpacedRehearsal:
@@ -43,7 +14,7 @@ class SpacedRehearsal:
 
     def run(self):
         try:
-            self.loop.call_soon(self.start)
+            self.loop.call_soon(self.choose_action)
             self.loop.run_forever()
         finally:
             self.loop.close()
@@ -61,7 +32,7 @@ class SpacedRehearsal:
         )
         self.loop.stop()
 
-    def start(self):
+    def choose_action(self):
         action = None
         while action not in ('a', 'p', 'q'):
             prompt = (
@@ -69,7 +40,7 @@ class SpacedRehearsal:
                 TermColor.yellow('a') + '] or to ' + TermColor.green('play') +
                 '[' + TermColor.green('p') + ']?\n'
                 'If you want to ' + TermColor.red('quit') +
-                ', please type [' + TermColor.red('q') + '].\n'
+                ', please type [' + TermColor.red('q') + '].\nAction: '
             )
             if action is not None:
                 prompt = TermColor.red(f'Invalid command: {action}\n') + prompt
@@ -82,8 +53,12 @@ class SpacedRehearsal:
         print(f'action play')
 
     def action_add(self):
-        print(f'action add')
-    
+        print(TermColor.bold('\nAdding new item:'))
+        side_a = input('Side A: ')
+        side_b = input('Side B: ')
+        print(TermColor.underline(f'Added: {side_a}/{side_b}'), '\n')
+        self.loop.call_soon(self.choose_action)
+
     def action_quit(self):
         self.exit('sigterm')
 
