@@ -1,0 +1,8 @@
+-- Is table exists?
+-- SELECT name FROM sqlite_master WHERE type='table' AND name='users';
+
+CREATE TABLE IF NOT EXISTS users(
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    login CHARACTER VARYING(2048) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
