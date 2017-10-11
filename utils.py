@@ -55,9 +55,10 @@ class Communication:
         return input(TermColor.grey(f'[Action] ->: '))
 
     @classmethod
-    def print_output(cls, *str_msgs):
+    def print_output(cls, *str_msgs, with_start_new_line=False):
         sep = '\n...: '
-        print(f'...:')
+        start_new_line = '\n' if with_start_new_line else ''
+        print(f'{start_new_line}...:')
         print(f'...: {sep.join(str_msgs)}')
 
     @classmethod
@@ -68,5 +69,19 @@ class Communication:
     def print_play_input(cls, str_msg):
         return input(TermColor.grey(f'>>>> {str_msg}: '))
 
+
+def handle_eof(method_to_call):
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            try:
+                return f(self, *args, **kwargs)
+            except EOFError:
+                Communication.print_output(
+                    TermColor.red('Termination!'),
+                    with_start_new_line=True
+                )
+                return getattr(self, method_to_call)()
+        return wrapper
+    return decorator
 
 

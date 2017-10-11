@@ -1,3 +1,4 @@
+import string
 import sqlite3
 import signal
 import asyncio
@@ -5,7 +6,7 @@ import functools
 
 from datetime import datetime, timedelta
 
-from utils import TermColor, Communication
+from utils import TermColor, Communication, handle_eof
 
 
 class SpacedRehearsal:
@@ -58,6 +59,7 @@ class SpacedRehearsal:
 
         self.loop.call_soon(self.login)
 
+    @handle_eof('quit')
     def login(self):
         login_name = Communication.print_input('Login')
         query = self.db_cursor.execute(
@@ -99,6 +101,7 @@ class SpacedRehearsal:
         Communication.print_output(f'User {login_name} is registered!')
         self.loop.call_soon(self.login)
 
+    @handle_eof('choose_action')
     def choose_action(self):
         ready_flashcards = self.get_ready_flashcards()
         action = None
@@ -126,7 +129,7 @@ class SpacedRehearsal:
     def get_ready_flashcards(self):
         query = self.db_cursor.execute(
             'select * from flashcards where user_id = ? and due <= ?',
-            (self.user['id'], datetime.now() + timedelta(days=1))
+            (self.user['id'], datetime.now())
         )
         flashcards = []
         for row in query:
@@ -141,6 +144,7 @@ class SpacedRehearsal:
         )
         return query.fetchone()['count(*)']
 
+    @handle_eof('choose_action')
     def play(self):
         flashcards = self.get_ready_flashcards()
         count = 0
@@ -150,7 +154,7 @@ class SpacedRehearsal:
         for flashcard in flashcards:
             count += 1
             Communication.print_output(
-                f'Flashcard {count}' 
+                f'Flashcard {count}'
             )
             Communication.print_play_output(
                 f'Side A: {flashcard["side_a"]}'
@@ -158,9 +162,12 @@ class SpacedRehearsal:
             start_time = datetime.now()
             side_b = Communication.print_play_input('Side B')
             end_time = datetime.now()
-            is_timeout = (end_time - start_time) > timedelta(seconds=5)
+            is_timeout = (end_time - start_time) > timedelta(seconds=20)
 
-            if side_b == flashcard['side_b']:
+            side_b = self.normalize_sentence(side_b)
+            flashcard_side_b = self.normalize_sentence(flashcard['side_b'])
+
+            if side_b == flashcard_side_b:
                 if is_timeout:
                     result = TermColor.red('Timeout')
                     box = 0
@@ -193,11 +200,27 @@ class SpacedRehearsal:
         )
         self.loop.call_soon(self.choose_action)
 
+    @staticmethod
+    def normalize_sentence(sentence):
+        _normalized = ''
+        for word in sentence.split(' '):
+            word = word.strip()
+            if word:
+                word = word.lower()
+                prefix = f' ' if word not in string.punctuation else f''
+                _normalized += prefix + word
+        return _normalized.strip().rstrip('.').rstrip(' ')
+
+    @handle_eof('choose_action')
     def add(self):
         Communication.print_output(TermColor.bold('Add new item:'))
         side_a = Communication.print_input('Side A')
         side_b = Communication.print_input('Side B')
         source = Communication.print_input('Source')
+
+        side_a = self.normalize_sentence(side_a)
+        side_b = self.normalize_sentence(side_b)
+
         query = self.db_cursor.execute(
             'select * from flashcards '
             'where (side_a = ? or side_b = ?) and user_id = ?',
@@ -216,13 +239,13 @@ class SpacedRehearsal:
             while action not in ('y', 'n'):
                 Communication.print_output(
                     TermColor.bold('Adding flashcard'),
-                    f'{TermColor.ligth_blue("Side A:")} {side_a}', 
+                    f'{TermColor.ligth_blue("Side A:")} {side_a}',
                     f'{TermColor.ligth_blue("Side B")} {side_b}',
                     f'{TermColor.ligth_blue("Box:")} {box}',
                     f'{TermColor.ligth_blue("Due:")} {due}',
                     f'{TermColor.ligth_blue("Source:")} {source}',
                     f'Do you want to add '
-                    f'[{TermColor.green("y")}/{TermColor.red("n")}] ?' 
+                    f'[{TermColor.green("y")}/{TermColor.red("n")}] ?'
                 )
 
                 if action is not None:
