@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS flashcards(
     user_id INTEGER NOT NULL,
     side_a CHARACTER VARYING(2048) NOT NULL,
     side_b CHARACTER VARYING(2048) NOT NULL,
+    phonetic_transcriptions TEXT,
+    comments TEXT,
     source CHARACTER VARYING(2048),
     box INTEGER NOT NULL,
     due TIMESTAMP NOT NULL,

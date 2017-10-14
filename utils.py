@@ -62,12 +62,14 @@ class Communication:
         print(f'...: {sep.join(str_msgs)}')
 
     @classmethod
-    def print_play_output(cls, str_msg):
-        return print(TermColor.grey(f'>>>> {str_msg}'))
+    def print_play_output(cls, key, value):
+        key = TermColor.grey(f'{key}: ')
+        return print(f">>>> {key}{value}")
 
     @classmethod
-    def print_play_input(cls, str_msg):
-        return input(TermColor.grey(f'>>>> {str_msg}: '))
+    def print_play_input(cls, key):
+        key = TermColor.grey(f'{key}: ')
+        return input(f">>>> {key}")
 
 
 def handle_eof(method_to_call):
