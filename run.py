@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 
+import random
 import string
 import sqlite3
 import signal
@@ -198,6 +199,7 @@ class Play(BaseClass):
         self.db_cursor = db_cursor
 
     def __call__(self, flashcards):
+        random.shuffle(flashcards)
         for flashcard in flashcards:
             self.count += 1
             side_b, flashcard_side_b, is_timeout = self.play(flashcard)
