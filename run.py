@@ -192,6 +192,7 @@ class Play(BaseClass):
 
     def __init__(self, db_conn, db_cursor):
         self.count = 0
+        self.played = 0
         self.right = 0
         self.wrong = 0
         self.timeout = 0
@@ -207,6 +208,7 @@ class Play(BaseClass):
                 flashcard, side_b, flashcard_side_b, is_timeout
             )
             self.print_result(flashcard, result)
+            self.played += 1
 
             action = self.request_input(
                 request_answers=('y', 'n'),
@@ -283,7 +285,8 @@ class Play(BaseClass):
 
     def print_end(self, flashcards):
         Communication.print_output(
-            f'Played total: {len(flashcards)}, '
+            f'Total: {len(flashcards)}, '
+            f'Played: {self.played}, '
             f'Right: {self.right}, '
             f'Wrong: {self.wrong}, '
             f'Timeout: {self.timeout}',
