@@ -198,6 +198,7 @@ class Play(BaseClass):
 
     def __init__(self, db_conn, db_cursor):
         super().__init__()
+        self.total = 0
         self.count = 0
         self.played = 0
         self.right = 0
@@ -208,6 +209,8 @@ class Play(BaseClass):
 
     def __call__(self, flashcards):
         random.shuffle(flashcards)
+        self.total = len(flashcards)
+
         for flashcard in flashcards:
             self.count += 1
             side_b, flashcard_side_b, is_timeout = self.play(flashcard)
@@ -229,11 +232,11 @@ class Play(BaseClass):
             if action == 'n':
                 break
 
-        self.print_end(flashcards)
+        self.print_end()
 
     def play(self, flashcard):
         Communication.print_output(
-            TermColor.bold(f'Flashcard {self.count}')
+            TermColor.bold(f'Flashcard {self.count}/{self.total}')
         )
         Communication.print_play_output(
             key='Side A', value=f'{flashcard["side_a"]}'
@@ -292,9 +295,9 @@ class Play(BaseClass):
             value=f'{flashcard["comments"]}'
         )
 
-    def print_end(self, flashcards):
+    def print_end(self):
         Communication.print_output(
-            f'Total: {len(flashcards)}, '
+            f'Total: {self.total}, '
             f'Played: {self.played}, '
             f'Right: {self.right}, '
             f'Wrong: {self.wrong}, '
