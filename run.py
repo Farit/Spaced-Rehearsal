@@ -6,6 +6,7 @@ import sqlite3
 import signal
 import asyncio
 import functools
+import configparser
 
 from datetime import datetime, timedelta
 
@@ -13,6 +14,10 @@ from utils import TermColor, Communication, handle_eof
 
 
 class BaseClass:
+
+    def __init__(self):
+        self.config = configparser.ConfigParser()
+        self.config.read('config.cfg')
 
     @staticmethod
     def normalize_sentence(sentence):
@@ -50,6 +55,7 @@ class BaseClass:
 class SpacedRehearsal(BaseClass):
 
     def __init__(self):
+        super().__init__()
         self.loop = asyncio.get_event_loop()
         self.db_conn = None
         self.db_cursor = None
@@ -191,6 +197,7 @@ class SpacedRehearsal(BaseClass):
 class Play(BaseClass):
 
     def __init__(self, db_conn, db_cursor):
+        super().__init__()
         self.count = 0
         self.played = 0
         self.right = 0
@@ -234,7 +241,9 @@ class Play(BaseClass):
         start_time = datetime.now()
         side_b = Communication.print_play_input(key='Side B')
         end_time = datetime.now()
-        is_timeout = (end_time - start_time) > timedelta(seconds=20)
+        is_timeout = (end_time - start_time) > timedelta(
+            seconds=self.config.getint('play', 'answer_timeout')
+        )
 
         side_b = self.normalize_sentence(side_b)
         flashcard_side_b = self.normalize_sentence(flashcard['side_b'])
@@ -297,6 +306,7 @@ class Play(BaseClass):
 class AddFlashcard(BaseClass):
 
     def __init__(self, db_conn, db_cursor, user_id):
+        super().__init__()
         self.db_conn = db_conn
         self.db_cursor = db_cursor
         self.user_id = user_id
