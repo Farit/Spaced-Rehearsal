@@ -220,17 +220,18 @@ class Play(BaseClass):
             self.print_result(flashcard, result)
             self.played += 1
 
-            action = self.request_input(
-                request_answers=('y', 'n'),
-                request_msgs=[
-                    (
-                        f'Do you want to continue '
-                        f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
-                    )
-                ]
-            )
-            if action == 'n':
-                break
+            if self.played < self.total:
+                action = self.request_input(
+                    request_answers=('y', 'n'),
+                    request_msgs=[
+                        (
+                            f'Do you want to continue '
+                            f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
+                        )
+                    ]
+                )
+                if action == 'n':
+                    break
 
         self.print_end()
 
