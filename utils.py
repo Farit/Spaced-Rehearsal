@@ -72,7 +72,7 @@ class Communication:
         return input(f">>>> {key}")
 
 
-def handle_eof(method_to_call):
+def handle_eof(method_to_call, with_start_new_line=True):
     def decorator(f):
         def wrapper(self, *args, **kwargs):
             try:
@@ -80,7 +80,7 @@ def handle_eof(method_to_call):
             except EOFError:
                 Communication.print_output(
                     TermColor.red('Termination!'),
-                    with_start_new_line=True
+                    with_start_new_line=with_start_new_line
                 )
                 return getattr(self, method_to_call)()
         return wrapper

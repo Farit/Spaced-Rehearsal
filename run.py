@@ -179,11 +179,18 @@ class SpacedRehearsal(BaseClass):
         )
         return query.fetchone()['count(*)']
 
-    @handle_eof('choose_action')
+    @handle_eof('choose_action', with_start_new_line=False)
     def play(self):
-        flashcards = self.get_ready_flashcards()
-        Play(self.db_conn, self.db_cursor)(flashcards)
-        self.loop.call_soon(self.choose_action)
+        _play = None
+        try:
+            flashcards = self.get_ready_flashcards()
+            _play = Play(self.db_conn, self.db_cursor)
+            _play(flashcards)
+            self.loop.call_soon(self.choose_action)
+        except EOFError as err:
+            if _play:
+                _play.print_end(with_start_new_line=True)
+            raise err
 
     @handle_eof('choose_action')
     def add(self):
@@ -296,7 +303,7 @@ class Play(BaseClass):
             value=f'{flashcard["comments"]}'
         )
 
-    def print_end(self):
+    def print_end(self, with_start_new_line=False):
         Communication.print_output(
             f'Total: {self.total}, '
             f'Played: {self.played}, '
@@ -304,6 +311,7 @@ class Play(BaseClass):
             f'Wrong: {self.wrong}, '
             f'Timeout: {self.timeout}',
             f'Game is over!',
+            with_start_new_line=with_start_new_line
         )
 
 
