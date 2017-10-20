@@ -316,6 +316,7 @@ class Play(BaseClass):
 
 
 class AddFlashcard(BaseClass):
+    source = None
 
     def __init__(self, db_conn, db_cursor, user_id):
         super().__init__()
@@ -328,6 +329,11 @@ class AddFlashcard(BaseClass):
         side_a = Communication.print_input('Side A')
         side_b = Communication.print_input('Side B')
         source = Communication.print_input('Source')
+        if source.strip() == '\p':
+            source = self.__class__.source
+        else:
+            self.__class__.source = source
+
         phonetic_transcriptions = Communication.print_input(
             'Phonetic transcriptions'
         )
