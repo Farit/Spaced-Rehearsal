@@ -244,7 +244,8 @@ class Play(BaseClass):
 
     def play(self, flashcard):
         Communication.print_output(
-            TermColor.bold(f'Flashcard {self.count}/{self.total}')
+            TermColor.bold(
+                f'Flashcard[{flashcard["id"]}] #{self.count} / #{self.total}')
         )
         Communication.print_play_output(
             key='Side A', value=f'{flashcard["side_a"]}'
