@@ -45,6 +45,7 @@ class BaseClass:
                     TermColor.red(f'Invalid command: {action}')
                 )
             action = Communication.print_action()
+            action = action.strip()
         return action
 
     @staticmethod
