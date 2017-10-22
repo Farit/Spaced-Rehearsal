@@ -345,64 +345,50 @@ class AddFlashcard(BaseClass):
         side_b = self.normalize_sentence(side_b)
 
         duplicates = self.get_duplicates(side_a, side_b)
+        self.show_duplicates(duplicates)
 
-        if not duplicates:
-            box = 0
-            due = datetime.now() + timedelta(days=2**box)
+        box = 0
+        due = datetime.now() + timedelta(days=2**box)
 
-            action = self.request_input(
-                request_answers=('y', 'n'),
-                request_msgs=[
-                    (
-                        TermColor.bold('Adding flashcard'),
-                        f'{TermColor.ligth_blue("Side A:")} {side_a}',
-                        f'{TermColor.ligth_blue("Side B")} {side_b}',
-                        f'{TermColor.ligth_blue("Box:")} {box}',
-                        f'{TermColor.ligth_blue("Due:")} {due}',
-                        f'{TermColor.ligth_blue("Source:")} {source}',
-                        f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
-                        f'{phonetic_transcriptions}',
-                        f'{TermColor.ligth_blue("Comment:")} {comments}'
-                    ),
-                    (
-                        f'Do you want to add '
-                        f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
-                    )
-                ]
+        action = self.request_input(
+            request_answers=('y', 'n'),
+            request_msgs=[
+                (
+                    TermColor.bold('Adding flashcard'),
+                    f'{TermColor.ligth_blue("Side A:")} {side_a}',
+                    f'{TermColor.ligth_blue("Side B")} {side_b}',
+                    f'{TermColor.ligth_blue("Box:")} {box}',
+                    f'{TermColor.ligth_blue("Due:")} {due}',
+                    f'{TermColor.ligth_blue("Source:")} {source}',
+                    f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
+                    f'{phonetic_transcriptions}',
+                    f'{TermColor.ligth_blue("Comment:")} {comments}'
+                ),
+                (
+                    f'Duplicates: {len(duplicates)}',
+                    f'Do you want to add '
+                    f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
+                )
+            ]
+        )
+
+        if action == 'y':
+            self.db_cursor.execute(
+                'insert into flashcards'
+                '(user_id, side_a, side_b, box, due, source, comments, '
+                ' phonetic_transcriptions)'
+                'values (?, ?, ?, ?, ?, ?, ?, ?);',
+                (self.user_id, side_a, side_b, box, due, source,
+                 comments, phonetic_transcriptions)
             )
-
-            if action == 'y':
-                self.db_cursor.execute(
-                    'insert into flashcards'
-                    '(user_id, side_a, side_b, box, due, source, comments, '
-                    ' phonetic_transcriptions)'
-                    'values (?, ?, ?, ?, ?, ?, ?, ?);',
-                    (self.user_id, side_a, side_b, box, due, source,
-                     comments, phonetic_transcriptions)
-                )
-                self.db_conn.commit()
-                Communication.print_output(
-                    TermColor.bold(f'Added: [{side_a}] / [{side_b}]')
-                )
-            else:
-                Communication.print_output(
-                    TermColor.red('Aborting flashcard.')
-                )
-
+            self.db_conn.commit()
+            Communication.print_output(
+                TermColor.bold(f'Added: [{side_a}] / [{side_b}]')
+            )
         else:
             Communication.print_output(
-                TermColor.bold(f'Duplicate flashcards: {len(duplicates)}')
+                TermColor.red('Aborting flashcard.')
             )
-            for duplicate in duplicates:
-                Communication.print_output(
-                    f'Side A: {duplicate["side_a"]}',
-                    f'Side B: {duplicate["side_b"]}',
-                    f'Box: {duplicate["box"]}',
-                    f'Due: {duplicate["due"]}',
-                    f'User: {duplicate["user_id"]}',
-                    f'Source: {duplicate["source"]}',
-                    f'Created: {duplicate["created"]}'
-                )
 
     def get_duplicates(self, side_a, side_b):
         query = self.db_cursor.execute(
@@ -416,6 +402,23 @@ class AddFlashcard(BaseClass):
             duplicates.append(duplicate)
 
         return duplicates
+
+    @staticmethod
+    def show_duplicates(duplicates):
+        if duplicates:
+            Communication.print_output(
+                TermColor.bold(f'Duplicate flashcards: {len(duplicates)}')
+            )
+            for duplicate in duplicates:
+                Communication.print_output(
+                    f'Side A: {duplicate["side_a"]}',
+                    f'Side B: {duplicate["side_b"]}',
+                    f'Box: {duplicate["box"]}',
+                    f'Due: {duplicate["due"]}',
+                    f'User: {duplicate["user_id"]}',
+                    f'Source: {duplicate["source"]}',
+                    f'Created: {duplicate["created"]}'
+                )
 
 
 if __name__ == '__main__':
