@@ -362,7 +362,7 @@ class AddFlashcard(BaseClass):
                     f'{TermColor.ligth_blue("Source:")} {source}',
                     f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
                     f'{phonetic_transcriptions}',
-                    f'{TermColor.ligth_blue("Comment:")} {comments}'
+                    f'{TermColor.ligth_blue("Comments:")} {comments}'
                 ),
                 (
                     f'Duplicates: {len(duplicates)}',
