@@ -341,8 +341,8 @@ class AddFlashcard(BaseClass):
         )
         comments = Communication.print_input('Comments')
 
-        side_a = self.normalize_sentence(side_a)
-        side_b = self.normalize_sentence(side_b)
+        # side_a = self.normalize_sentence(side_a)
+        # side_b = self.normalize_sentence(side_b)
 
         duplicates = self.get_duplicates(side_a, side_b)
         self.show_duplicates(duplicates)
