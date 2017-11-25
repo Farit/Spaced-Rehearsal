@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 
+import re
 import random
 import string
 import sqlite3
@@ -29,6 +30,10 @@ class BaseClass:
                 prefix = f' ' if word not in string.punctuation else f''
                 _normalized += prefix + word
         return _normalized.strip().rstrip('.').rstrip(' ')
+
+    @staticmethod
+    def remove_whitespaces(sentence):
+        return re.sub(r'[\s]{2,}', r' ', sentence).strip()
 
     @staticmethod
     def request_input(request_msgs, request_answers):
@@ -343,6 +348,8 @@ class AddFlashcard(BaseClass):
 
         # side_a = self.normalize_sentence(side_a)
         # side_b = self.normalize_sentence(side_b)
+        side_a = self.remove_whitespaces(side_a)
+        side_b = self.remove_whitespaces(side_b)
 
         duplicates = self.get_duplicates(side_a, side_b)
         self.show_duplicates(duplicates)
@@ -356,7 +363,7 @@ class AddFlashcard(BaseClass):
                 (
                     TermColor.bold('Adding flashcard'),
                     f'{TermColor.ligth_blue("Side A:")} {side_a}',
-                    f'{TermColor.ligth_blue("Side B")} {side_b}',
+                    f'{TermColor.ligth_blue("Side B:")} {side_b}',
                     f'{TermColor.ligth_blue("Box:")} {box}',
                     f'{TermColor.ligth_blue("Due:")} {due}',
                     f'{TermColor.ligth_blue("Source:")} {source}',
