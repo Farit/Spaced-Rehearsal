@@ -284,12 +284,15 @@ class Play(BaseClass):
             self.wrong += 1
 
         due = datetime.now() + timedelta(days=2**box)
+        self.save_result(due, box, flashcard['id'])
+        return result
+
+    def save_result(self, due, box, flashcard_id):
         self.db_cursor.execute(
             'update flashcards set due=?, box=? where id=?',
-            (due, box, flashcard['id'])
+            (due, box, flashcard_id)
         )
         self.db_conn.commit()
-        return result
 
     @staticmethod
     def print_result(flashcard, result):
