@@ -7,18 +7,17 @@ import sqlite3
 import signal
 import asyncio
 import functools
-import configparser
 
 from datetime import datetime, timedelta
 
+from config import ConfigAdapter
 from utils import TermColor, Communication, handle_eof
 
 
 class BaseClass:
 
     def __init__(self):
-        self.config = configparser.ConfigParser()
-        self.config.read('config.cfg')
+        self.config = ConfigAdapter(filename='config.cfg')
 
     @staticmethod
     def normalize_sentence(sentence):
