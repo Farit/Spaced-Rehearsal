@@ -302,15 +302,19 @@ class Play(BaseClass):
         )
         Communication.print_play_output(
             key='Source',
-            value=f'{flashcard["source"]}'
+            value=f'{flashcard["source"] or ""}'
         )
         Communication.print_play_output(
             key='Phonetic transcriptions',
-            value=f'{flashcard["phonetic_transcriptions"]}'
+            value=f'{flashcard["phonetic_transcriptions"] or ""}'
         )
         Communication.print_play_output(
-            key='Comments',
-            value=f'{flashcard["comments"]}'
+            key='Explanation',
+            value=f'{flashcard["explanation"] or ""}'
+        )
+        Communication.print_play_output(
+            key='Examples',
+            value=f'{flashcard["examples"] or ""}'
         )
 
     def print_end(self, with_start_new_line=False):
@@ -347,7 +351,10 @@ class AddFlashcard(BaseClass):
         phonetic_transcriptions = Communication.print_input(
             'Phonetic transcriptions'
         )
-        comments = Communication.print_input('Comments')
+        part_of_speech = Communication.print_input('Part of speech')
+        explanation = Communication.print_input('Explanation')
+        explanation = f'[{part_of_speech}] {explanation}'
+        examples = Communication.print_input('Examples(;)')
 
         # side_a = self.normalize_sentence(side_a)
         # side_b = self.normalize_sentence(side_b)
@@ -372,7 +379,8 @@ class AddFlashcard(BaseClass):
                     f'{TermColor.ligth_blue("Source:")} {source}',
                     f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
                     f'{phonetic_transcriptions}',
-                    f'{TermColor.ligth_blue("Comments:")} {comments}'
+                    f'{TermColor.ligth_blue("Explanation:")} {explanation}',
+                    f'{TermColor.ligth_blue("Examples:")} {examples}'
                 ),
                 (
                     f'Duplicates: {len(duplicates)}',
@@ -385,11 +393,11 @@ class AddFlashcard(BaseClass):
         if action == 'y':
             self.db_cursor.execute(
                 'insert into flashcards'
-                '(user_id, side_a, side_b, box, due, source, comments, '
-                ' phonetic_transcriptions)'
-                'values (?, ?, ?, ?, ?, ?, ?, ?);',
+                '(user_id, side_a, side_b, box, due, source,'
+                ' explanation, examples, phonetic_transcriptions)'
+                'values (?, ?, ?, ?, ?, ?, ?, ?, ?);',
                 (self.user_id, side_a, side_b, box, due, source,
-                 comments, phonetic_transcriptions)
+                 explanation, examples, phonetic_transcriptions)
             )
             self.db_conn.commit()
             Communication.print_output(
