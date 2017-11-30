@@ -3,14 +3,13 @@ import random
 from datetime import datetime, timedelta
 
 from db_session import DBSession
-from utils import TermColor, Communication, normalize_value
-from base import BaseClass
+from config import ConfigAdapter
+from utils import TermColor, normalize_value
+from base import AsyncIO
 
 
-class Play(BaseClass):
-
-    def __init__(self, user_id):
-        super().__init__()
+class Play:
+    def __init__(self, user_id: int, async_io: AsyncIO):
         self.total = 0
         self.count = 0
         self.played = 0
@@ -18,26 +17,24 @@ class Play(BaseClass):
         self.wrong = 0
         self.timeout = 0
         self.user_id = user_id
+        self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
+        self.async_io = async_io
 
-    def __call__(self):
+    async def play(self):
         flashcards = self.db_session.get_ready_flashcards(user_id=self.user_id)
         random.shuffle(flashcards)
         self.total = len(flashcards)
 
         for flashcard in flashcards:
             self.count += 1
-            side_b, flashcard_side_b, is_timeout = self.play(flashcard)
-            result = self.handle_answer(
-                flashcard, side_b, flashcard_side_b, is_timeout
-            )
-            self.print_result(flashcard, result)
+            await self._play_flashcard(flashcard)
             self.played += 1
 
             if self.played < self.total:
-                action = self.request_input(
-                    request_answers=('y', 'n'),
-                    request_msgs=[
+                action = await self.async_io.input_action(
+                    action_answers=('y', 'n'),
+                    action_msgs=[
                         (
                             f'Do you want to continue '
                             f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
@@ -47,30 +44,27 @@ class Play(BaseClass):
                 if action == 'n':
                     break
 
-        self.print_end()
+        await self.print_game_score()
 
-    def play(self, flashcard):
-        Communication.print_output(
-            TermColor.bold(
-                f'Flashcard[{flashcard["id"]}] #{self.count} / #{self.total}')
-        )
-        Communication.print_play_output(
-            key='Side A', value=f'{flashcard["side_a"]}'
-        )
+    async def _play_flashcard(self, flashcard):
+        header = f'Flashcard[{flashcard["id"]}] #{self.count} / #{self.total}'
+        await self.async_io.print(TermColor.bold(header))
+
+        show_side_a = f'{TermColor.grey("Side A: ")}{flashcard["side_a"]}'
+        await self.async_io.print(show_side_a)
+
         start_time = datetime.now()
-        side_b = Communication.print_play_input(key='Side B')
+        entered_side_b = await self.async_io.input('Side B')
         end_time = datetime.now()
+
         is_timeout = (end_time - start_time) > timedelta(
             seconds=self.config.getint('play', 'answer_timeout')
         )
 
-        side_b = normalize_value(side_b)
+        entered_side_b = normalize_value(entered_side_b)
         flashcard_side_b = normalize_value(flashcard['side_b'])
 
-        return side_b, flashcard_side_b, is_timeout
-
-    def handle_answer(self, flashcard, side_b, flashcard_side_b, is_timeout):
-        if side_b.lower() == flashcard_side_b.lower():
+        if entered_side_b.lower() == flashcard_side_b.lower():
             if is_timeout:
                 result = TermColor.red('Timeout')
                 box = 0
@@ -88,38 +82,23 @@ class Play(BaseClass):
         self.db_session.update_flashcard(
             due=due, box=box, flashcard_id=flashcard['id']
         )
-        return result
 
-    @staticmethod
-    def print_result(flashcard, result):
-        Communication.print_play_output(
-            key='Answer',
-            value=f'{flashcard["side_b"]} {result}'
-        )
-        Communication.print_play_output(
-            key='Source',
-            value=f'{flashcard["source"] or ""}'
-        )
-        Communication.print_play_output(
-            key='Phonetic transcriptions',
-            value=f'{flashcard["phonetic_transcriptions"] or ""}'
-        )
-        Communication.print_play_output(
-            key='Explanation',
-            value=f'{flashcard["explanation"] or ""}'
-        )
-        Communication.print_play_output(
-            key='Examples',
-            value=f'{flashcard["examples"] or ""}'
+        await self.async_io.print(
+            f'{TermColor.grey("Answer: ")}{flashcard["side_b"]} {result}',
+            f'{TermColor.grey("Source: ")}{flashcard["source"] or ""}',
+            f'{TermColor.grey("Phonetic transcriptions: ")}'
+            f'{flashcard["phonetic_transcriptions"] or ""}',
+            f'{TermColor.grey("Explanation: ")}'
+            f'{flashcard["explanation"] or ""}',
+            f'{TermColor.grey("Examples: ")}{flashcard["examples"] or ""}'
         )
 
-    def print_end(self, with_start_new_line=False):
-        Communication.print_output(
+    async def print_game_score(self):
+        await self.async_io.print(
             f'Total: {self.total}, '
             f'Played: {self.played}, '
             f'Right: {self.right}, '
             f'Wrong: {self.wrong}, '
             f'Timeout: {self.timeout}',
-            f'Game is over!',
-            with_start_new_line=with_start_new_line
+            f'Game is over!'
         )

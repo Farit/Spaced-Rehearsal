@@ -49,34 +49,6 @@ class TermColor:
         return cls.coloralize(cls.UNDERLINE, string_to_color)
 
 
-class Communication:
-
-    @classmethod
-    def print_input(cls, str_msg):
-        return input(TermColor.grey(f'[{str_msg}] ->: '))
-
-    @classmethod
-    def print_action(cls):
-        return input(TermColor.grey(f'[Action] ->: '))
-
-    @classmethod
-    def print_output(cls, *str_msgs, with_start_new_line=False):
-        sep = '\n...: '
-        start_new_line = '\n' if with_start_new_line else ''
-        print(f'{start_new_line}...:')
-        print(f'...: {sep.join(str_msgs)}')
-
-    @classmethod
-    def print_play_output(cls, key, value):
-        key = TermColor.grey(f'{key}: ')
-        return print(f">>>> {key}{value}")
-
-    @classmethod
-    def print_play_input(cls, key):
-        key = TermColor.grey(f'{key}: ')
-        return input(f">>>> {key}")
-
-
 def datetime_now():
     local_tz = datetime.timezone(datetime.timedelta(seconds=-time.timezone))
     return datetime.datetime.now(tz=local_tz)

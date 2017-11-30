@@ -3,50 +3,52 @@ from datetime import timedelta
 
 from db_session import DBSession
 from flashcard import Flashcard
-from utils import TermColor, Communication, datetime_utc_now
-from base import BaseClass
+from config import ConfigAdapter
+from utils import TermColor, datetime_utc_now
+from base import AsyncIO
 
 
-class AddFlashcard(BaseClass):
+class AddFlashcard:
 
-    def __init__(self, user_id):
-        super().__init__()
+    def __init__(self, user_id, async_io: AsyncIO):
         self.user_id = user_id
         self.previous_sources = deque([None], maxlen=2)
+        self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
+        self.async_io = async_io
 
-    def add(self):
+    async def add(self):
         flashcard = Flashcard(user_id=self.user_id)
-        Communication.print_output(TermColor.bold('Add new flashcard:'))
+        await self.async_io.print(TermColor.bold('Add new flashcard:'))
 
-        flashcard.side_a = Communication.print_input('Side A')
-        flashcard.side_b = Communication.print_input('Side B')
+        flashcard.side_a = await self.async_io.input('Side A')
+        flashcard.side_b = await self.async_io.input('Side B')
 
-        source = Communication.print_input('Source')
+        source = await self.async_io.input('Source')
         if source.strip() == '\p':
             source = self.previous_sources[0]
         else:
             self.previous_sources.appendleft(source)
         flashcard.source = source
 
-        flashcard.phonetic_transcriptions = Communication.print_input(
+        flashcard.phonetic_transcriptions = await self.async_io.input(
             'Phonetic transcriptions'
         )
 
-        part_of_speech = Communication.print_input('Part of speech')
-        explanation = Communication.print_input('Explanation')
+        part_of_speech = await self.async_io.input('Part of speech')
+        explanation = await self.async_io.input('Explanation')
         flashcard.explanation = f'[{part_of_speech}] {explanation}'
 
-        flashcard.examples = Communication.print_input('Examples(;)')
+        flashcard.examples = await self.async_io.input('Examples(;)')
 
         duplicates = self.db_session.get_flashcard_duplicates(flashcard)
-        self.show_duplicates(duplicates)
+        await self.show_duplicates(duplicates)
 
         flashcard.due = datetime_utc_now() + timedelta(days=2**flashcard.box)
 
-        action = self.request_input(
-            request_answers=('y', 'n'),
-            request_msgs=[
+        action = await self.async_io.input_action(
+            action_answers=('y', 'n'),
+            action_msgs=[
                 (
                     TermColor.bold('Adding flashcard'),
                     f'{TermColor.ligth_blue("Side A:")} {flashcard.side_a}',
@@ -70,18 +72,17 @@ class AddFlashcard(BaseClass):
 
         if action == 'y':
             self.db_session.add_flashcard(flashcard=flashcard)
-            Communication.print_output(TermColor.bold(f'Added: {flashcard}'))
+            await self.async_io.print(TermColor.bold(f'Added: {flashcard}'))
         else:
-            Communication.print_output(TermColor.red('Aborting flashcard.'))
+            await self.async_io.print(TermColor.red('Aborting flashcard.'))
 
-    @staticmethod
-    def show_duplicates(duplicates):
+    async def show_duplicates(self, duplicates):
         if duplicates:
-            Communication.print_output(
+            await self.async_io.print(
                 TermColor.bold(f'Duplicate flashcards: {len(duplicates)}')
             )
             for duplicate in duplicates:
-                Communication.print_output(
+                await self.async_io.print(
                     f'Side A: {duplicate["side_a"]}',
                     f'Side B: {duplicate["side_b"]}',
                     f'Box: {duplicate["box"]}',
