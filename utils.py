@@ -1,5 +1,7 @@
+import re
 import time
 import datetime
+import string
 
 
 class TermColor:
@@ -99,4 +101,18 @@ def datetime_utc_now():
     now = datetime_now()
     utc_now = (now - now.utcoffset()).replace(tzinfo=datetime.timezone.utc)
     return utc_now
+
+
+def normalize_value(value):
+    _normalized = ''
+    for word in value.split(' '):
+        word = word.strip()
+        if word:
+            prefix = f' ' if word not in string.punctuation else f''
+            _normalized += prefix + word
+    return _normalized.strip()
+
+
+def remove_whitespaces(value):
+    return re.sub(r'[\s]{2,}', r' ', value).strip()
 

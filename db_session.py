@@ -1,5 +1,6 @@
 import sqlite3
 
+from flashcard import Flashcard
 from datetime import datetime
 
 
@@ -168,11 +169,11 @@ class DBSession:
         )
         self.db_conn.commit()
 
-    def get_duplicates(self, user_id, side_a, side_b):
+    def get_flashcard_duplicates(self, flashcard: Flashcard):
         query = self.db_cursor.execute(
             'select * from flashcards '
             'where (side_a = ? or side_b = ?) and user_id = ?',
-            (side_a, side_b, user_id)
+            (flashcard.side_a, flashcard.side_b, flashcard.user_id)
         )
         duplicates = []
         for row in query:
