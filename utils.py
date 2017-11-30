@@ -77,21 +77,6 @@ class Communication:
         return input(f">>>> {key}")
 
 
-def handle_eof(method_to_call, with_start_new_line=True):
-    def decorator(f):
-        def wrapper(self, *args, **kwargs):
-            try:
-                return f(self, *args, **kwargs)
-            except EOFError:
-                Communication.print_output(
-                    TermColor.red('Termination!'),
-                    with_start_new_line=with_start_new_line
-                )
-                return getattr(self, method_to_call)()
-        return wrapper
-    return decorator
-
-
 def datetime_now():
     local_tz = datetime.timezone(datetime.timedelta(seconds=-time.timezone))
     return datetime.datetime.now(tz=local_tz)
