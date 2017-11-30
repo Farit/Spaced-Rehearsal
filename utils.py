@@ -1,3 +1,6 @@
+import time
+import datetime
+
 
 class TermColor:
     RED = '\033[31m'
@@ -86,4 +89,14 @@ def handle_eof(method_to_call, with_start_new_line=True):
         return wrapper
     return decorator
 
+
+def datetime_now():
+    local_tz = datetime.timezone(datetime.timedelta(seconds=-time.timezone))
+    return datetime.datetime.now(tz=local_tz)
+
+
+def datetime_utc_now():
+    now = datetime_now()
+    utc_now = (now - now.utcoffset()).replace(tzinfo=datetime.timezone.utc)
+    return utc_now
 

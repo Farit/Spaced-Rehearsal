@@ -3,7 +3,6 @@
 import re
 import random
 import string
-import sqlite3
 import signal
 import asyncio
 import functools
@@ -11,7 +10,8 @@ import functools
 from datetime import datetime, timedelta
 
 from config import ConfigAdapter
-from utils import TermColor, Communication, handle_eof
+from db_session import DBSession
+from utils import TermColor, Communication, handle_eof, datetime_now
 
 
 class BaseClass:
@@ -52,25 +52,22 @@ class BaseClass:
             action = action.strip()
         return action
 
-    @staticmethod
-    def zip_row(row):
-        return {k: row[k] for k in row.keys()}
-
 
 class SpacedRehearsal(BaseClass):
 
     def __init__(self):
         super().__init__()
         self.loop = asyncio.get_event_loop()
-        self.db_conn = None
-        self.db_cursor = None
+        self.db_session = DBSession(
+            self.config['database'].get('name'), setup_db=True
+        )
         self.user = None
         self.set_signal_handler('sigint')
         self.set_signal_handler('sigterm')
 
     def run(self):
         try:
-            self.loop.call_soon(self.setup_db)
+            self.loop.call_soon(self.login)
             self.loop.run_forever()
         finally:
             self.loop.close()
@@ -88,33 +85,14 @@ class SpacedRehearsal(BaseClass):
         )
         if self.user:
             Communication.print_output(f'Bye {self.user["login"]}!')
-        self.db_conn.close()
+        self.db_session.close()
         self.loop.stop()
-
-    def setup_db(self):
-        self.db_conn = sqlite3.connect('spaced_rehearsal.db')
-        self.db_conn.row_factory = sqlite3.Row
-        self.db_cursor = self.db_conn.cursor()
-
-        with open('sql/users.sql') as fh:
-            users_table = fh.read()
-        self.db_cursor.execute(users_table)
-        self.db_conn.commit()
-
-        with open('sql/flashcards.sql') as fh:
-            flashcards_sql = fh.read()
-        self.db_cursor.executescript(flashcards_sql)
-        self.db_conn.commit()
-
-        self.loop.call_soon(self.login)
 
     @handle_eof('quit')
     def login(self):
         login_name = Communication.print_input('Login')
-        query = self.db_cursor.execute(
-            'select * from users where login=?', (login_name,)
-        ).fetchone()
-        if query is None:
+        user = self.db_session.get_user(login_name)
+        if user is None:
             action = self.request_input(
                 request_answers=('y', 'n', 'q'),
                 request_msgs=[
@@ -133,21 +111,23 @@ class SpacedRehearsal(BaseClass):
                 getattr(self, action)()
 
         else:
-            self.user = self.zip_row(row=query)
+            self.user = self.db_session.get_user(login_name)
             self.loop.call_soon(self.choose_action)
 
     def register(self, login_name):
-        self.db_cursor.execute(
-            'insert into users(login) values (?);',
-            (login_name, )
-        )
-        self.db_conn.commit()
+        self.db_session.register_user(login_name)
         Communication.print_output(f'User {login_name} is registered!')
         self.loop.call_soon(self.login)
 
     @handle_eof('choose_action')
     def choose_action(self):
-        ready_flashcards = self.get_ready_flashcards()
+        total_number = self.db_session.count_flashcards(
+            user_id=self.user["id"]
+        )
+        ready_number = self.db_session.count_flashcards(
+            user_id=self.user["id"],
+            due=datetime_now()
+        )
         action = self.request_input(
             request_answers=('a', 'p', 'q'),
             request_msgs=[
@@ -155,9 +135,8 @@ class SpacedRehearsal(BaseClass):
                     f'Do you want to {TermColor.yellow("add")} '
                     f'[{TermColor.yellow("a")}] or to {TermColor.green("play")}'
                     f'[{TermColor.green("p")}] ?',
-                    f'Number of the flashcards: {self.count_flashcards()}',
-                    f'Number of the flashcards ready to play: '
-                    f'{len(ready_flashcards)}',
+                    f'Number of the flashcards: {total_number}',
+                    f'Number of the flashcards ready to play: {ready_number}',
                     f'If you want to {TermColor.red("quit")}, please type '
                     f'[{TermColor.red("q")}].'
                 )
@@ -166,31 +145,12 @@ class SpacedRehearsal(BaseClass):
         action = {'a': 'add', 'p': 'play', 'q': 'quit'}[action]
         getattr(self, action)()
 
-    def get_ready_flashcards(self):
-        query = self.db_cursor.execute(
-            'select * from flashcards where user_id = ? and due <= ?',
-            (self.user['id'], datetime.now())
-        )
-        flashcards = []
-        for row in query:
-            flashcard = self.zip_row(row=row)
-            flashcards.append(flashcard)
-        return flashcards
-
-    def count_flashcards(self):
-        query = self.db_cursor.execute(
-            'select count(*) from flashcards where user_id = ?',
-            (self.user['id'],)
-        )
-        return query.fetchone()['count(*)']
-
     @handle_eof('choose_action', with_start_new_line=False)
     def play(self):
         _play = None
         try:
-            flashcards = self.get_ready_flashcards()
-            _play = Play(self.db_conn, self.db_cursor)
-            _play(flashcards)
+            _play = Play(user_id=self.user['id'])
+            _play()
             self.loop.call_soon(self.choose_action)
         except EOFError as err:
             if _play:
@@ -199,7 +159,7 @@ class SpacedRehearsal(BaseClass):
 
     @handle_eof('choose_action')
     def add(self):
-        AddFlashcard(self.db_conn, self.db_cursor, self.user['id'])()
+        AddFlashcard(self.user['id'])()
         self.loop.call_soon(self.choose_action)
 
     def quit(self):
@@ -208,7 +168,7 @@ class SpacedRehearsal(BaseClass):
 
 class Play(BaseClass):
 
-    def __init__(self, db_conn, db_cursor):
+    def __init__(self, user_id):
         super().__init__()
         self.total = 0
         self.count = 0
@@ -216,10 +176,11 @@ class Play(BaseClass):
         self.right = 0
         self.wrong = 0
         self.timeout = 0
-        self.db_conn = db_conn
-        self.db_cursor = db_cursor
+        self.user_id = user_id
+        self.db_session = DBSession(self.config['database'].get('name'))
 
-    def __call__(self, flashcards):
+    def __call__(self):
+        flashcards = self.db_session.get_ready_flashcards(user_id=self.user_id)
         random.shuffle(flashcards)
         self.total = len(flashcards)
 
@@ -283,15 +244,10 @@ class Play(BaseClass):
             self.wrong += 1
 
         due = datetime.now() + timedelta(days=2**box)
-        self.save_result(due, box, flashcard['id'])
-        return result
-
-    def save_result(self, due, box, flashcard_id):
-        self.db_cursor.execute(
-            'update flashcards set due=?, box=? where id=?',
-            (due, box, flashcard_id)
+        self.db_session.update_flashcard(
+            due=due, box=box, flashcard_id=flashcard['id']
         )
-        self.db_conn.commit()
+        return result
 
     @staticmethod
     def print_result(flashcard, result):
@@ -331,11 +287,10 @@ class Play(BaseClass):
 class AddFlashcard(BaseClass):
     source = None
 
-    def __init__(self, db_conn, db_cursor, user_id):
+    def __init__(self, user_id):
         super().__init__()
-        self.db_conn = db_conn
-        self.db_cursor = db_cursor
         self.user_id = user_id
+        self.db_session = DBSession(self.config['database'].get('name'))
 
     def __call__(self, *args, **kwargs):
         Communication.print_output(TermColor.bold('Add new flashcard:'))
@@ -360,7 +315,9 @@ class AddFlashcard(BaseClass):
         side_a = self.remove_whitespaces(side_a)
         side_b = self.remove_whitespaces(side_b)
 
-        duplicates = self.get_duplicates(side_a, side_b)
+        duplicates = self.db_session.get_duplicates(
+            user_id=self.user_id, side_a=side_a, side_b=side_b
+        )
         self.show_duplicates(duplicates)
 
         box = 0
@@ -390,15 +347,19 @@ class AddFlashcard(BaseClass):
         )
 
         if action == 'y':
-            self.db_cursor.execute(
-                'insert into flashcards'
-                '(user_id, side_a, side_b, box, due, source,'
-                ' explanation, examples, phonetic_transcriptions)'
-                'values (?, ?, ?, ?, ?, ?, ?, ?, ?);',
-                (self.user_id, side_a, side_b, box, due, source,
-                 explanation, examples, phonetic_transcriptions)
-            )
-            self.db_conn.commit()
+            flashcard = {
+                'user_id': self.user_id,
+                'side_a': side_a,
+                'side_b': side_b,
+                'box': box,
+                'due': due,
+                'source': source,
+                'explanation': explanation,
+                'examples': examples,
+                'phonetic_transcriptions': phonetic_transcriptions
+
+            }
+            self.db_session.add_flashcard(flashcard=flashcard)
             Communication.print_output(
                 TermColor.bold(f'Added: [{side_a}] / [{side_b}]')
             )
@@ -406,19 +367,6 @@ class AddFlashcard(BaseClass):
             Communication.print_output(
                 TermColor.red('Aborting flashcard.')
             )
-
-    def get_duplicates(self, side_a, side_b):
-        query = self.db_cursor.execute(
-            'select * from flashcards '
-            'where (side_a = ? or side_b = ?) and user_id = ?',
-            (side_a, side_b, self.user_id)
-        )
-        duplicates = []
-        for row in query:
-            duplicate = self.zip_row(row=row)
-            duplicates.append(duplicate)
-
-        return duplicates
 
     @staticmethod
     def show_duplicates(duplicates):
