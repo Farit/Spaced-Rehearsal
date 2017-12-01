@@ -147,7 +147,9 @@ class SpacedRehearsal:
         except EOFError:
             await self.play_flashcards.print_game_score()
             await self.async_io.print(TermColor.red('Termination!'))
-
+        except Exception as err:
+            await self.async_io.print(TermColor.red('Error!'))
+            raise err
         finally:
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
 
@@ -156,7 +158,9 @@ class SpacedRehearsal:
             await self.add_flashcard.add()
         except EOFError:
             await self.async_io.print(TermColor.red('Termination!'))
-
+        except Exception as err:
+            await self.async_io.print(TermColor.red('Error!'))
+            raise err
         finally:
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
 

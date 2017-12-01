@@ -87,6 +87,7 @@ class AsyncIO:
                 await asyncio.sleep(self.wait_timeout)
                 raise EOFError()
 
-            action = action.rstrip('\n')
+            # action = action.rstrip('\n')
+            action = action.strip()
 
         return action

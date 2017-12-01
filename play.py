@@ -1,3 +1,4 @@
+import textwrap
 import random
 
 from datetime import datetime, timedelta
@@ -87,15 +88,49 @@ class Play:
             due=due, box=box, flashcard_id=flashcard['id']
         )
 
-        await self.async_io.print(
-            f'{TermColor.grey("Answer: ")}{flashcard["side_b"]} {result}',
-            f'{TermColor.grey("Source: ")}{flashcard["source"] or ""}',
-            f'{TermColor.grey("Phonetic transcriptions: ")}'
-            f'{flashcard["phonetic_transcriptions"] or ""}',
-            f'{TermColor.grey("Explanation: ")}'
-            f'{flashcard["explanation"] or ""}',
-            f'{TermColor.grey("Examples: ")}{flashcard["examples"] or ""}'
-        )
+        await self.print_flashcard_score(flashcard, result)
+
+    async def print_flashcard_score(self, flashcard, result):
+        output = [
+            f'{TermColor.grey("Result: ")}{result}',
+            f'{TermColor.grey("Answer: ")}{flashcard["side_b"]}',
+        ]
+
+        source = (flashcard["source"] or "").strip()
+        if source:
+            output.append(
+                f'{TermColor.grey("Source: ")}{source}'
+            )
+
+        phonetic_trans = (flashcard["phonetic_transcriptions"] or "").strip()
+        if phonetic_trans:
+            output.append(
+                f'{TermColor.grey("Phonetic transcriptions: ")}{phonetic_trans}'
+            )
+
+        explanation = (flashcard["explanation"] or "").strip()
+        if explanation:
+            output.append(
+                f'{TermColor.grey("Explanation: ")}{explanation}'
+            )
+
+        examples = (flashcard["examples"] or "").strip()
+        if examples:
+            output.append(f'{TermColor.grey("Examples: ")}')
+            for ind, example in enumerate(examples.split(';'), start=1):
+                formated_example = f'{ind}: {example}'
+                output.append(textwrap.indent(formated_example, ' '*4))
+
+        formated_output = []
+        for line in output:
+            output_lines = textwrap.wrap(line, width=100)
+            for ind, output_line in enumerate(output_lines):
+                if ind == 0:
+                    formated_output.append(output_line)
+                else:
+                    formated_output.append(textwrap.indent(output_line, ' '*4))
+
+        await self.async_io.print(*formated_output)
 
     async def print_game_score(self):
         await self.async_io.print(
