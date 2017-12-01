@@ -61,10 +61,14 @@ class Play:
             seconds=self.config.getint('play', 'answer_timeout')
         )
 
-        entered_side_b = normalize_value(entered_side_b)
-        flashcard_side_b = normalize_value(flashcard['side_b'])
+        entered_side_b = normalize_value(
+            entered_side_b, remove_trailing='.', to_lower=True
+        )
+        flashcard_side_b = normalize_value(
+            flashcard['side_b'], remove_trailing='.', to_lower=True
+        )
 
-        if entered_side_b.lower() == flashcard_side_b.lower():
+        if entered_side_b == flashcard_side_b:
             if is_timeout:
                 result = TermColor.red('Timeout')
                 box = 0

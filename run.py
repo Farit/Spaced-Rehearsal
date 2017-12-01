@@ -11,6 +11,7 @@ from add import AddFlashcard
 from play import Play
 from utils import TermColor, datetime_now
 from base import AsyncIO
+from server import WebServer
 
 
 class SpacedRehearsal:
@@ -25,11 +26,19 @@ class SpacedRehearsal:
         self.db_session = DBSession(
             self.config['database'].get('name'), setup_db=True
         )
+        self.web_server = None
         self.set_signal_handler('sigint')
         self.set_signal_handler('sigterm')
 
     def run(self):
         try:
+            self.web_server = self.loop.run_until_complete(
+                self.loop.create_server(
+                    WebServer,
+                    self.config['server'].get('host'),
+                    self.config['server'].getint('port')
+                )
+            )
             asyncio.ensure_future(self.login(), loop=self.loop)
             self.loop.run_forever()
         finally:
@@ -53,6 +62,10 @@ class SpacedRehearsal:
 
     async def login(self):
         try:
+            await self.async_io.print(
+                f'WebServer serving on '
+                f'{self.web_server.sockets[0].getsockname()}'
+            )
             login_name = await self.async_io.input('Login')
             user = self.db_session.get_user(login_name)
             if user is None:

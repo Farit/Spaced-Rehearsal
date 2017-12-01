@@ -60,13 +60,20 @@ def datetime_utc_now():
     return utc_now
 
 
-def normalize_value(value):
+def normalize_value(value, *, remove_trailing=None, to_lower=False):
     _normalized = ''
     for word in value.split(' '):
         word = word.strip()
         if word:
             prefix = f' ' if word not in string.punctuation else f''
             _normalized += prefix + word
+
+    if remove_trailing is not None:
+        _normalized = _normalized.rstrip(remove_trailing)
+
+    if to_lower:
+        _normalized = _normalized.lower()
+
     return _normalized.strip()
 
 
