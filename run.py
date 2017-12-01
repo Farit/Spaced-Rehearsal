@@ -72,10 +72,10 @@ class SpacedRehearsal:
                 action = await self.async_io.input_action(
                     action_answers=('y', 'n', 'q'),
                     action_msgs=[
-                        (TermColor.red(f'User "{login_name}" does not exist.'),
-                         'Do you want to create [y/n] ?',
-                         f'If you want to {TermColor.red("quit")} '
-                         f'please type [{TermColor.red("q")}].')
+                        TermColor.red(f'User "{login_name}" does not exist.'),
+                        'Do you want to create [y/n] ?',
+                        f'If you want to {TermColor.red("quit")} '
+                        f'please type [{TermColor.red("q")}].'
                     ]
                 )
 
@@ -119,15 +119,13 @@ class SpacedRehearsal:
             action = await self.async_io.input_action(
                 action_answers=('a', 'p', 'q'),
                 action_msgs=[
-                    (
-                        f'Do you want to {TermColor.yellow("add")} '
-                        f'[{TermColor.yellow("a")}] or to {TermColor.green("play")}'
-                        f'[{TermColor.green("p")}] ?',
-                        f'Number of the flashcards: {total_number}',
-                        f'Number of the flashcards ready to play: {ready_number}',
-                        f'If you want to {TermColor.red("quit")}, please type '
-                        f'[{TermColor.red("q")}].'
-                    )
+                    f'Do you want to {TermColor.yellow("add")} '
+                    f'[{TermColor.yellow("a")}] or to {TermColor.green("play")}'
+                    f'[{TermColor.green("p")}] ?',
+                    f'Number of the flashcards: {total_number}',
+                    f'Number of the flashcards ready to play: {ready_number}',
+                    f'If you want to {TermColor.red("quit")}, please type '
+                    f'[{TermColor.red("q")}].'
                 ]
             )
             if action == 'a':

@@ -1,7 +1,9 @@
 import sqlite3
 
-from flashcard import Flashcard
 from datetime import datetime
+
+from flashcard import Flashcard
+from utils import datetime_utc_now
 
 
 class DBSession:
@@ -141,7 +143,7 @@ class DBSession:
             'FROM flashcards '
             'WHERE user_id = ? AND due <= ? '
             'ORDER BY due',
-            (user_id, datetime.now())
+            (user_id, datetime_utc_now())
         )
         flashcards = []
         for row in query:
@@ -153,12 +155,12 @@ class DBSession:
         self.db_cursor.execute(
             'insert into flashcards'
             '(user_id, side_a, side_b, box, due, source,'
-            ' explanation, examples, phonetic_transcriptions)'
-            'values (?, ?, ?, ?, ?, ?, ?, ?, ?);',
+            ' explanation, examples, phonetic_transcriptions, created)'
+            'values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
             (flashcard['user_id'], flashcard['side_a'], flashcard['side_b'],
              flashcard['box'], flashcard['due'], flashcard['source'],
              flashcard['explanation'], flashcard['examples'],
-             flashcard['phonetic_transcriptions'])
+             flashcard['phonetic_transcriptions'], datetime_utc_now())
         )
         self.db_conn.commit()
 

@@ -37,6 +37,10 @@ class TermColor:
         return cls.coloralize(cls.GREY, string_to_color)
 
     @classmethod
+    def purple(cls, string_to_color):
+        return cls.coloralize(cls.PURPLE, string_to_color)
+
+    @classmethod
     def ligth_blue(cls, string_to_color):
         return cls.coloralize(cls.LIGTH_BLUE, string_to_color)
 
@@ -50,7 +54,9 @@ class TermColor:
 
 
 def datetime_now():
-    local_tz = datetime.timezone(datetime.timedelta(seconds=-time.timezone))
+    offset = time.timezone
+    offset = offset if offset >= 0 else -offset
+    local_tz = datetime.timezone(datetime.timedelta(seconds=offset))
     return datetime.datetime.now(tz=local_tz)
 
 
@@ -58,6 +64,17 @@ def datetime_utc_now():
     now = datetime_now()
     utc_now = (now - now.utcoffset()).replace(tzinfo=datetime.timezone.utc)
     return utc_now
+
+
+def datetime_change_timezone(datetime_obj, *, offset):
+    assert isinstance(offset, (float, int)), f'received: {offset!r}'
+    in_utc = (datetime_obj - datetime_obj.utcoffset()).replace(
+        tzinfo=datetime.timezone.utc
+    )
+
+    offset = offset if offset >= 0 else -offset
+    to_tz = datetime.timezone(datetime.timedelta(seconds=offset))
+    return (in_utc + datetime.timedelta(seconds=offset)).replace(tzinfo=to_tz)
 
 
 def normalize_value(value, *, remove_trailing=None, to_lower=False):

@@ -52,42 +52,14 @@ class AsyncIO:
             await asyncio.sleep(self.wait_timeout)
             raise EOFError()
 
-        return result.rstrip('\n')
+        return result.strip()
 
     async def input_action(self, action_msgs, action_answers):
         action = None
         while action not in action_answers:
-            for action_msg in action_msgs:
-                message = '\n...: ' + '\n...: '.join(action_msg)
-                message = f'...: {message}\n'
-                self.loop.add_writer(
-                    sys.stdout, partial(self.handle_stdout, message)
-                )
-                await asyncio.sleep(self.wait_timeout)
-
+            await self.print(*action_msgs)
             if action is not None:
-                msg = TermColor.red(f'Invalid command: {action}\n')
-                self.loop.add_writer(
-                    sys.stdout, partial(self.handle_stdout, msg)
-                )
-                await asyncio.sleep(self.wait_timeout)
-
-            msg = TermColor.grey(f'[Action] ->: ')
-            self.loop.add_writer(
-                sys.stdout, partial(self.handle_stdout, msg)
-            )
-            await asyncio.sleep(self.wait_timeout)
-
-            self.loop.add_reader(sys.stdin, self.handle_stdin)
-            action = await self.queue.get()
-            if not action:
-                self.loop.add_writer(
-                    sys.stdout, partial(self.handle_stdout, '\n')
-                )
-                await asyncio.sleep(self.wait_timeout)
-                raise EOFError()
-
-            # action = action.rstrip('\n')
-            action = action.strip()
+                await self.print(TermColor.red(f'Invalid command: {action}'))
+            action = await self.input('Action')
 
         return action

@@ -36,38 +36,48 @@ class AddFlashcard:
         )
 
         part_of_speech = await self.async_io.input('Part of speech')
-        explanation = await self.async_io.input('Explanation')
-        flashcard.explanation = f'[{part_of_speech}] {explanation}'
+        part_of_speech = part_of_speech.strip()
 
-        flashcard.examples = await self.async_io.input('Examples(;)')
+        explanation = await self.async_io.input('Explanation')
+        if part_of_speech:
+            flashcard.explanation = f'[{part_of_speech}] {explanation}'
+        else:
+            flashcard.explanation = f'{explanation}'
+
+        flashcard.examples = await self.async_io.input('Examples')
 
         duplicates = self.db_session.get_flashcard_duplicates(flashcard)
         await self.show_duplicates(duplicates)
 
         flashcard.due = datetime_utc_now() + timedelta(days=2**flashcard.box)
 
+        action_msgs=[
+            TermColor.bold('Adding flashcard'),
+            f'{TermColor.ligth_blue("Side A:")} {flashcard.side_a}',
+            f'{TermColor.ligth_blue("Side B:")} {flashcard.side_b}',
+            f'{TermColor.ligth_blue("Box:")} {flashcard.box}',
+            f'{TermColor.ligth_blue("Due:")} {flashcard.due}',
+            f'{TermColor.ligth_blue("Source:")} {flashcard.source}',
+            f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
+            f'{flashcard.phonetic_transcriptions}',
+            f'{TermColor.ligth_blue("Explanation:")} '
+            f'{flashcard.explanation}',
+            f'{TermColor.ligth_blue("Examples:")} {flashcard.examples}',
+            f'',
+        ]
+
+        if duplicates:
+            action_msgs.append(
+                f'{TermColor.purple(f"Duplicates: {len(duplicates)}")}'
+            )
+
+        action_msgs.extend([
+            f'Do you want to add '
+            f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
+        ])
+
         action = await self.async_io.input_action(
-            action_answers=('y', 'n'),
-            action_msgs=[
-                (
-                    TermColor.bold('Adding flashcard'),
-                    f'{TermColor.ligth_blue("Side A:")} {flashcard.side_a}',
-                    f'{TermColor.ligth_blue("Side B:")} {flashcard.side_b}',
-                    f'{TermColor.ligth_blue("Box:")} {flashcard.box}',
-                    f'{TermColor.ligth_blue("Due:")} {flashcard.due}',
-                    f'{TermColor.ligth_blue("Source:")} {flashcard.source}',
-                    f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
-                    f'{flashcard.phonetic_transcriptions}',
-                    f'{TermColor.ligth_blue("Explanation:")} '
-                    f'{flashcard.explanation}',
-                    f'{TermColor.ligth_blue("Examples:")} {flashcard.examples}'
-                ),
-                (
-                    f'Duplicates: {len(duplicates)}',
-                    f'Do you want to add '
-                    f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
-                )
-            ]
+            action_answers=('y', 'n'), action_msgs=action_msgs
         )
 
         if action == 'y':
@@ -83,11 +93,11 @@ class AddFlashcard:
             )
             for duplicate in duplicates:
                 await self.async_io.print(
-                    f'Side A: {duplicate["side_a"]}',
-                    f'Side B: {duplicate["side_b"]}',
-                    f'Box: {duplicate["box"]}',
-                    f'Due: {duplicate["due"]}',
-                    f'User: {duplicate["user_id"]}',
-                    f'Source: {duplicate["source"]}',
-                    f'Created: {duplicate["created"]}'
+                    f'{TermColor.purple("Side A:")} {duplicate["side_a"]}',
+                    f'{TermColor.purple("Side B:")} {duplicate["side_b"]}',
+                    f'{TermColor.purple("Box:")} {duplicate["box"]}',
+                    f'{TermColor.purple("Due:")} {duplicate["due"]}',
+                    f'{TermColor.purple("User:")} {duplicate["user_id"]}',
+                    f'{TermColor.purple("Source:")} {duplicate["source"]}',
+                    f'{TermColor.purple("Created:")} {duplicate["created"]}'
                 )

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from db_session import DBSession
 from config import ConfigAdapter
-from utils import TermColor, normalize_value
+from utils import TermColor, normalize_value, datetime_utc_now
 from base import AsyncIO
 
 
@@ -36,10 +36,8 @@ class Play:
                 action = await self.async_io.input_action(
                     action_answers=('y', 'n'),
                     action_msgs=[
-                        (
-                            f'Do you want to continue '
-                            f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
-                        )
+                        f'Do you want to continue '
+                        f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
                     ]
                 )
                 if action == 'n':
@@ -83,7 +81,7 @@ class Play:
             box = 0
             self.wrong += 1
 
-        due = datetime.now() + timedelta(days=2**box)
+        due = datetime_utc_now() + timedelta(days=2**box)
         self.db_session.update_flashcard(
             due=due, box=box, flashcard_id=flashcard['id']
         )
