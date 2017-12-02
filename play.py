@@ -118,9 +118,13 @@ class Play:
         examples = (flashcard["examples"] or "").strip()
         if examples:
             output.append(f'{TermColor.grey("Examples: ")}')
-            for ind, example in enumerate(examples.split(';'), start=1):
-                formated_example = f'{ind}: {example}'
-                output.append(textwrap.indent(formated_example, ' '*4))
+            examples = examples.split(';')
+            examples.sort(reverse=True)
+            for ind, example in enumerate(examples, start=1):
+                example = example.strip()
+                if example:
+                    formated_example = f'{ind}: {example}'
+                    output.append(textwrap.indent(formated_example, ' '*4))
 
         formated_output = []
         for line in output:
@@ -141,7 +145,7 @@ class Play:
             )
         output.extend([
             f'Total: {self.total}, '
-            f'Played: {self.played}, '
+            f'Played: {self.played}, ',
             f'Right: {self.right}, '
             f'Wrong: {self.wrong}, '
             f'Timeout: {self.timeout}',
