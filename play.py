@@ -23,6 +23,7 @@ class Play:
         self.async_io = async_io
 
     async def play(self):
+        start_time = datetime.now()
         flashcards = self.db_session.get_ready_flashcards(user_id=self.user_id)
         random.shuffle(flashcards)
         self.total = len(flashcards)
@@ -43,7 +44,9 @@ class Play:
                 if action == 'n':
                     break
 
-        await self.print_game_score()
+        end_time = datetime.now()
+        playing_time = end_time - start_time
+        await self.print_game_score(playing_time)
 
     async def _play_flashcard(self, flashcard):
         header = f'Flashcard[{flashcard["id"]}] #{self.count} / #{self.total}'
@@ -130,12 +133,18 @@ class Play:
 
         await self.async_io.print(*formated_output)
 
-    async def print_game_score(self):
-        await self.async_io.print(
+    async def print_game_score(self, playing_time=None):
+        output = []
+        if playing_time is not None:
+            output.append(
+                f'Playing time: {playing_time}'
+            )
+        output.extend([
             f'Total: {self.total}, '
             f'Played: {self.played}, '
             f'Right: {self.right}, '
             f'Wrong: {self.wrong}, '
             f'Timeout: {self.timeout}',
             f'Game is over!'
-        )
+        ])
+        await self.async_io.print(*output)
