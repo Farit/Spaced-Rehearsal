@@ -3,7 +3,7 @@ import asyncio
 
 from functools import partial
 
-from utils import TermColor
+from src.utils import TermColor
 
 
 class AsyncIO:

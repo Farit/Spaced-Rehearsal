@@ -2,8 +2,8 @@ import sqlite3
 
 from datetime import datetime
 
-from flashcard import Flashcard
-from utils import datetime_utc_now
+from src.flashcard import Flashcard
+from src.utils import datetime_utc_now
 
 
 class DBSession:

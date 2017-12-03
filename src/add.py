@@ -1,11 +1,11 @@
 from collections import deque
 from datetime import timedelta
 
-from db_session import DBSession
-from flashcard import Flashcard
-from config import ConfigAdapter
-from utils import TermColor, datetime_utc_now
-from base import AsyncIO
+from src.db_session import DBSession
+from src.flashcard import Flashcard
+from src.config import ConfigAdapter
+from src.utils import TermColor, datetime_utc_now
+from src.base import AsyncIO
 
 
 class AddFlashcard:

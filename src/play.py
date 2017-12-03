@@ -3,10 +3,10 @@ import random
 
 from datetime import datetime, timedelta
 
-from db_session import DBSession
-from config import ConfigAdapter
-from utils import TermColor, normalize_value, datetime_utc_now
-from base import AsyncIO
+from src.db_session import DBSession
+from src.config import ConfigAdapter
+from src.utils import TermColor, normalize_value, datetime_utc_now
+from src.base import AsyncIO
 
 
 class Play:
