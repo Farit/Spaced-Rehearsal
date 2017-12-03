@@ -42,7 +42,7 @@ class WebServer(asyncio.Protocol):
         return http_headers
 
     def index_page_response(self):
-        with open('index.html') as fh:
+        with open('web_server/index.html') as fh:
             content = fh.read()
 
         http_headers = self.form_http_headers(
@@ -53,7 +53,7 @@ class WebServer(asyncio.Protocol):
         return http_headers + content
 
     def d3_js_response(self):
-        with open('d3.js') as fh:
+        with open('web_server/d3.js') as fh:
             content = fh.read()
 
         http_headers = self.form_http_headers(

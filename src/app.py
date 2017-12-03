@@ -11,7 +11,7 @@ from src.add import AddFlashcard
 from src.play import Play
 from src.utils import TermColor, datetime_utc_now
 from src.base import AsyncIO
-from server import WebServer
+from web_server.web_server import WebServer
 
 
 class SpacedRehearsal:
