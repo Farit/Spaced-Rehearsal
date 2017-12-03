@@ -2,7 +2,7 @@ import unittest
 
 from datetime import datetime, timezone, timedelta
 
-from utils import normalize_value, datetime_change_timezone
+from src.utils import normalize_value, datetime_change_timezone
 
 
 class TestCaseFlashcard(unittest.TestCase):

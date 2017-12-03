@@ -5,8 +5,8 @@ import unittest
 
 from datetime import timedelta, datetime
 
-from utils import datetime_utc_now
-from flashcard import Flashcard
+from src.utils import datetime_utc_now
+from src.flashcard import Flashcard
 
 
 class TestCaseFlashcard(unittest.TestCase):
