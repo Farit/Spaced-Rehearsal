@@ -22,7 +22,16 @@ class Play:
         self.db_session = DBSession(self.config['database'].get('name'))
         self.async_io = async_io
 
+    def counters_zeroing(self):
+        self.total = 0
+        self.count = 0
+        self.played = 0
+        self.right = 0
+        self.wrong = 0
+        self.timeout = 0
+
     async def play(self):
+        self.counters_zeroing()
         start_time = datetime.now()
         flashcards = self.db_session.get_ready_flashcards(user_id=self.user_id)
         random.shuffle(flashcards)
