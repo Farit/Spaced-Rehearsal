@@ -12,7 +12,7 @@ class AddFlashcard:
 
     def __init__(self, user_id, async_io: AsyncIO):
         self.user_id = user_id
-        self.previous_sources = deque([None], maxlen=2)
+        self.previous_sources = deque([], maxlen=2)
         self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
         self.async_io = async_io
@@ -24,11 +24,11 @@ class AddFlashcard:
         flashcard.side_a = await self.async_io.input('Side A')
         flashcard.side_b = await self.async_io.input('Side B')
 
-        source = await self.async_io.input('Source')
-        if source.strip() == '\p':
-            source = self.previous_sources[0]
-        else:
-            self.previous_sources.appendleft(source)
+        source = await self.async_io.input(
+            'Source',
+            pre_fill=self.previous_sources[0] if self.previous_sources else ''
+        )
+        self.previous_sources.appendleft(source)
         flashcard.source = source
 
         flashcard.phonetic_transcriptions = await self.async_io.input(

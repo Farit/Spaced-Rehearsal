@@ -18,8 +18,8 @@ class SpacedRehearsal:
 
     def __init__(self):
         self.user = None
-        self.add_flashcard = None
-        self.play_flashcards = None
+        self.add_flashcard: AddFlashcard = None
+        self.play_flashcards: Play = None
         self.loop = asyncio.get_event_loop()
         self.async_io = AsyncIO(loop=self.loop)
         self.config = ConfigAdapter(filename='config.cfg')
@@ -155,10 +155,14 @@ class SpacedRehearsal:
         try:
             await self.add_flashcard.add()
         except EOFError:
+            self.add_flashcard.previous_sources.popleft()
             await self.async_io.print(TermColor.red('Termination!'))
+
         except Exception as err:
+            self.add_flashcard.previous_sources.popleft()
             await self.async_io.print(TermColor.red('Error!'))
             raise err
+
         finally:
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
 
