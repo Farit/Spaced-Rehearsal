@@ -1,4 +1,5 @@
 import sys
+import readline
 import asyncio
 
 from functools import partial
@@ -13,19 +14,18 @@ class AsyncIO:
         self.loop = loop
         self.queue = asyncio.Queue()
 
-    def __call__(self, msg):
-        self.loop.add_writer(sys.stdout, self.handle_stdout, msg)
-        self.loop.add_reader(sys.stdin, self.handle_stdin)
-        return self.queue.get()
-
     def handle_stdout(self, msg):
         sys.stdout.buffer.write(msg.encode('utf-8'))
         sys.stdout.flush()
         self.loop.remove_writer(sys.stdout)
 
-    def handle_stdin(self):
-        data = sys.stdin.readline()
-        asyncio.async(self.queue.put(data))
+    @staticmethod
+    def blocking_input(prompt, pre_fill=''):
+        readline.set_startup_hook(lambda: readline.insert_text(pre_fill))
+        try:
+            return input(prompt)
+        finally:
+            readline.set_startup_hook()
 
     async def print(self, *msgs):
         message = '\n...: ' + '\n...: '.join(msgs)
@@ -35,22 +35,20 @@ class AsyncIO:
         )
         await asyncio.sleep(self.wait_timeout)
 
-    async def input(self, msg):
+    async def input(self, msg, pre_fill=''):
         message = TermColor.grey(f'[{msg}] ->: ')
-        self.loop.add_writer(
-            sys.stdout, partial(self.handle_stdout, message)
+        future = self.loop.run_in_executor(
+            None, self.blocking_input, message, pre_fill
         )
-        await asyncio.sleep(self.wait_timeout)
 
-        self.loop.add_reader(sys.stdin, self.handle_stdin)
-        result = await self.queue.get()
-
-        if not result:
+        try:
+            result = await future
+        except EOFError:
             self.loop.add_writer(
                 sys.stdout, partial(self.handle_stdout, '\n')
             )
             await asyncio.sleep(self.wait_timeout)
-            raise EOFError()
+            raise
 
         return result.strip()
 
