@@ -60,9 +60,7 @@ class Play:
     async def _play_flashcard(self, flashcard):
         header = f'Flashcard[{flashcard["id"]}] #{self.count} / #{self.total}'
         await self.async_io.print(TermColor.bold(header))
-
-        show_side_a = f'{TermColor.grey("Side A: ")}{flashcard["side_a"]}'
-        await self.async_io.print(show_side_a)
+        await self.print_flashcard_side_a(flashcard)
 
         start_time = datetime.now()
         entered_side_b = await self.async_io.input('Side B')
@@ -100,6 +98,11 @@ class Play:
 
         await self.print_flashcard_score(flashcard, result)
 
+    async def print_flashcard_side_a(self, flashcard):
+        await self.print_formatted_output(output=[
+            f'{TermColor.grey("Side A: ")}{flashcard["side_a"]}'
+        ])
+
     async def print_flashcard_score(self, flashcard, result):
         output = [
             f'{TermColor.grey("Result: ")}{result}',
@@ -135,16 +138,7 @@ class Play:
                     formated_example = f'{ind}: {example}'
                     output.append(textwrap.indent(formated_example, ' '*4))
 
-        formated_output = []
-        for line in output:
-            output_lines = textwrap.wrap(line, width=100)
-            for ind, output_line in enumerate(output_lines):
-                if ind == 0:
-                    formated_output.append(output_line)
-                else:
-                    formated_output.append(textwrap.indent(output_line, ' '*4))
-
-        await self.async_io.print(*formated_output)
+        await self.print_formatted_output(output)
 
     async def print_game_score(self, playing_time=None):
         output = []
@@ -161,3 +155,15 @@ class Play:
             f'Game is over!'
         ])
         await self.async_io.print(*output)
+
+    async def print_formatted_output(self, output):
+        formatted_output = []
+        for line in output:
+            output_lines = textwrap.wrap(line, width=100)
+            for ind, output_line in enumerate(output_lines):
+                if ind == 0:
+                    formatted_output.append(output_line)
+                else:
+                    formatted_output.append(textwrap.indent(output_line, ' '*4))
+
+        await self.async_io.print(*formatted_output)
