@@ -155,11 +155,11 @@ class SpacedRehearsal:
         try:
             await self.add_flashcard.add()
         except EOFError:
-            self.add_flashcard.previous_sources.popleft()
+            self.add_flashcard.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Termination!'))
 
         except Exception as err:
-            self.add_flashcard.previous_sources.popleft()
+            self.add_flashcard.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Error!'))
             raise err
 

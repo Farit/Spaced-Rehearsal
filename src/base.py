@@ -1,5 +1,6 @@
 import sys
 import readline
+import textwrap
 import asyncio
 
 from functools import partial
@@ -62,3 +63,15 @@ class AsyncIO:
             action = action.lower()
 
         return action
+
+    async def print_formatted_output(self, output):
+        formatted_output = []
+        for line in output:
+            output_lines = textwrap.wrap(line, width=100)
+            for ind, output_line in enumerate(output_lines):
+                if ind == 0:
+                    formatted_output.append(output_line)
+                else:
+                    formatted_output.append(textwrap.indent(output_line, ' '*4))
+
+        await self.print(*formatted_output)
