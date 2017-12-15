@@ -59,5 +59,6 @@ class AsyncIO:
             if action is not None:
                 await self.print(TermColor.red(f'Invalid command: {action}'))
             action = await self.input('Action')
+            action = action.lower()
 
         return action
