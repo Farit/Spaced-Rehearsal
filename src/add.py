@@ -48,7 +48,12 @@ class AddFlashcard:
         else:
             flashcard.explanation = f'{explanation}'
 
-        flashcard.examples = await self.async_io.input('Examples')
+        examples = []
+        example = await self.async_io.input('Example')
+        while example:
+            examples.append(example)
+            example = await self.async_io.input('Example')
+        flashcard.examples = ';'.join(examples)
 
         duplicates = self.db_session.get_flashcard_duplicates(flashcard)
         await self.show_duplicates(duplicates)
