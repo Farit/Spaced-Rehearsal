@@ -64,7 +64,7 @@ class SpacedRehearsal:
         try:
             address, port = self.web_server.sockets[0].getsockname()
             await self.async_io.print(
-                f'WebServer serving on http://{address}:{port}'
+                f'Web server is running on http://{address}:{port}'
             )
             await self.async_io.print(
                 TermColor.bold(f'Please, enter a username.'),
