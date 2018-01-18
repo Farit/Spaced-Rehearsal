@@ -78,10 +78,14 @@ class SpacedRehearsal:
                 action = await self.async_io.input_action(
                     action_answers=('y', 'n', 'q'),
                     action_msgs=[
-                        TermColor.red(f'User "{login_name}" does not exist.'),
-                        'Do you want to create [y/n] ?',
-                        f'If you want to {TermColor.red("quit")} '
-                        f'please type [{TermColor.red("q")}].'
+                        TermColor.bold(
+                            f'A user with a login "{login_name}" '
+                            f'does not exist.'
+                        ),
+                        'Do you want to create it?',
+                        f'Please, enter {TermColor.green("y")} for YES or '
+                        f'{TermColor.red("n")} for NO',
+                        f'Entering {TermColor.red("q")} terminates the program.'
                     ]
                 )
 
