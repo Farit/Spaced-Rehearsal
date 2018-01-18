@@ -62,9 +62,9 @@ class SpacedRehearsal:
 
     async def login(self):
         try:
+            address, port = self.web_server.sockets[0].getsockname()
             await self.async_io.print(
-                f'WebServer serving on '
-                f'{self.web_server.sockets[0].getsockname()}'
+                f'WebServer serving on http://{address}:{port}'
             )
             login_name = await self.async_io.input('Login')
             user = self.db_session.get_user(login_name)
