@@ -47,10 +47,10 @@ class SpacedRehearsal:
     def set_signal_handler(self, signame):
         self.loop.add_signal_handler(
             getattr(signal, signame.upper()),
-            functools.partial(self.exit, signame)
+            lambda: None
         )
 
-    async def exit(self, signame):
+    async def exit(self, signame='sigterm'):
         await self.async_io.print(
             f'Got signal {TermColor.bold(f"{signame}")}',
             f'{TermColor.red("Exit")}'
@@ -84,7 +84,7 @@ class SpacedRehearsal:
                 elif action == 'n':
                     method = self.login()
                 else:
-                    method = self.quit()
+                    method = self.exit()
 
                 asyncio.ensure_future(method, loop=self.loop)
 
@@ -100,7 +100,7 @@ class SpacedRehearsal:
 
         except EOFError:
             await self.async_io.print(TermColor.red('Termination!'))
-            asyncio.ensure_future(self.quit(), loop=self.loop)
+            asyncio.ensure_future(self.exit(), loop=self.loop)
 
     async def register(self, login_name):
         self.db_session.register_user(login_name)
@@ -133,7 +133,7 @@ class SpacedRehearsal:
             elif action == 'p':
                 asyncio.ensure_future(self.play(), loop=self.loop)
             else:
-                asyncio.ensure_future(self.quit(), loop=self.loop)
+                asyncio.ensure_future(self.exit(), loop=self.loop)
 
         except EOFError:
             await self.async_io.print(TermColor.red('Termination!'))
@@ -165,6 +165,3 @@ class SpacedRehearsal:
 
         finally:
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
-
-    async def quit(self):
-        asyncio.ensure_future(self.exit('sigterm'), loop=self.loop)
