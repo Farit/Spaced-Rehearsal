@@ -37,6 +37,9 @@ class Play:
         random.shuffle(flashcards)
         self.total = len(flashcards)
 
+        await self.async_io.print(
+            f'Pressing {TermColor.red("Ctrl+D")} terminates playing.'
+        )
         for flashcard in flashcards:
             self.count += 1
             await self._play_flashcard(flashcard)

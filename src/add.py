@@ -23,7 +23,10 @@ class AddFlashcard:
 
     async def add(self):
         flashcard = Flashcard(user_id=self.user_id)
-        await self.async_io.print(TermColor.bold('Add new flashcard:'))
+        await self.async_io.print(
+            f'Pressing {TermColor.red("Ctrl+D")} terminates adding.',
+            TermColor.bold('New flashcard:')
+        )
 
         flashcard.side_a = await self.async_io.input('Side A')
         flashcard.side_b = await self.async_io.input('Side B')
