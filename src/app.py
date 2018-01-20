@@ -129,13 +129,16 @@ class SpacedRehearsal:
             action = await self.async_io.input_action(
                 action_answers=('a', 'p', 'q'),
                 action_msgs=[
-                    f'Do you want to {TermColor.yellow("add")} '
-                    f'[{TermColor.yellow("a")}] or to {TermColor.green("play")}'
-                    f'[{TermColor.green("p")}] ?',
-                    f'Number of the flashcards: {total_number}',
-                    f'Number of the flashcards ready to play: {ready_number}',
-                    f'If you want to {TermColor.red("quit")}, please type '
-                    f'[{TermColor.red("q")}].'
+                    f'Number of the flashcards: '
+                    f'{TermColor.bold(str(total_number))}',
+                    f'Number of the flashcards ready to play: '
+                    f'{TermColor.bold(str(ready_number))}',
+                    f'If you want to {TermColor.yellow("add")} a new flashcard,'
+                    f' please enter {TermColor.yellow("a")}.',
+                    f'If you want to {TermColor.green("play")},'
+                    f' please enter {TermColor.green("p")}.',
+                    f'If you want to {TermColor.red("quit")}, please enter '
+                    f'{TermColor.red("q")}.'
                 ]
             )
             if action == 'a':
