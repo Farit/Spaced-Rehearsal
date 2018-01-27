@@ -106,6 +106,7 @@ class AddFlashcard:
             )
             for duplicate in duplicates:
                 await self.async_io.print_formatted_output(output=[
+                    f'{TermColor.purple("id:")} {duplicate["id"]}',
                     f'{TermColor.purple("Side A:")} {duplicate["side_a"]}',
                     f'{TermColor.purple("Side B:")} {duplicate["side_b"]}',
                     f'{TermColor.purple("Box:")} {duplicate["box"]}',
