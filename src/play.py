@@ -1,5 +1,4 @@
 import textwrap
-import random
 
 from datetime import datetime, timedelta
 
@@ -34,7 +33,6 @@ class Play:
         self.counters_zeroing()
         start_time = datetime.now()
         flashcards = self.db_session.get_ready_flashcards(user_id=self.user_id)
-        random.shuffle(flashcards)
         self.total = len(flashcards)
 
         await self.async_io.print(

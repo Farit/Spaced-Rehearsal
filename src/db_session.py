@@ -1,6 +1,8 @@
+import random
 import sqlite3
 
 from datetime import datetime
+from itertools import groupby
 
 from src.flashcard import Flashcard
 from src.utils import datetime_utc_now
@@ -149,7 +151,20 @@ class DBSession:
         for row in query:
             flashcard = self.zip_row(row=row)
             flashcards.append(flashcard)
-        return flashcards
+
+        shuffled_flashcards = []
+        group_by_date = groupby(
+            flashcards,
+            key=lambda f: datetime.strptime(
+                f['due'][:-6], '%Y-%m-%d %H:%M:%S.%f'
+            ).date()
+        )
+        for date, data in group_by_date:
+            flashcards_by_date = list(data)
+            random.shuffle(flashcards_by_date)
+            shuffled_flashcards.extend(flashcards_by_date)
+            
+        return shuffled_flashcards
 
     def add_flashcard(self, flashcard):
         self.db_cursor.execute(
