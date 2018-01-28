@@ -100,6 +100,7 @@ class SpacedRehearsal:
 
             else:
                 self.user = self.db_session.get_user(login_name)
+                WebServer.USER_ID = self.user['id']
                 self.add_flashcard = AddFlashcard(
                     user_id=self.user['id'], async_io=self.async_io
                 )

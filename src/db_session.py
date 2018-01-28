@@ -183,3 +183,18 @@ class DBSession:
             duplicates.append(duplicate)
 
         return duplicates
+
+    def get_vis_by_date(self, user_id):
+        query = self.db_cursor.execute(
+            'SELECT strftime("%Y-%m-%d", due) as key, count(*) as value '
+            'FROM flashcards '
+            'WHERE user_id = ? '
+            'GROUP BY strftime("%Y-%m-%d", due) '
+            'ORDER BY strftime("%Y-%m-%d", due);',
+            (user_id, )
+        )
+        data = []
+        for row in query:
+            datum = self.zip_row(row=row)
+            data.append(datum)
+        return data
