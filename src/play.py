@@ -67,9 +67,18 @@ class Play:
         entered_side_b = await self.async_io.input('Side B')
         end_time = datetime.now()
 
-        is_timeout = (end_time - start_time) > timedelta(
-            seconds=self.config.getint('play', 'answer_timeout')
-        )
+        answer_timeout = self.config.get('play', 'answer_timeout')
+        is_timeout = False
+        if answer_timeout != 'none':
+            try:
+                answer_timeout = int(answer_timeout)
+            except ValueError:
+                raise ValueError(
+                    f'Answer timeout must have a valid value: "none" or integer'
+                )
+            is_timeout = (end_time - start_time) > timedelta(
+                seconds=answer_timeout
+            )
 
         entered_side_b = normalize_value(
             entered_side_b, remove_trailing='.', to_lower=True
