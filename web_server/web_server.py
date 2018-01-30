@@ -24,9 +24,11 @@ class WebServer(asyncio.Protocol):
         if path == '/':
             http_response = self.index_page_response()
         elif path == '/d3.js':
-            http_response = self.d3_js_response()
+            http_response = self.d3_js_response(d3_file='d3.js')
         elif path == '/d3-scale.js':
-            http_response = self.d3_scale_js_response()
+            http_response = self.d3_js_response(d3_file='d3-scale.js')
+        elif path == '/d3-scale-chromatic.js':
+            http_response = self.d3_js_response(d3_file='d3-scale-chromatic.js')
         elif path == '/vis_by_date.json':
             http_response = self.vis_by_date_response()
         else:
@@ -64,19 +66,8 @@ class WebServer(asyncio.Protocol):
 
         return http_headers + content
 
-    def d3_js_response(self):
-        with open('web_server/d3.js') as fh:
-            content = fh.read()
-
-        http_headers = self.form_http_headers(
-            content_length=len(content),
-            content_type='text/html'
-        )
-
-        return http_headers + content
-
-    def d3_scale_js_response(self):
-        with open('web_server/d3-scale.js') as fh:
+    def d3_js_response(self, d3_file):
+        with open(f'web_server/{d3_file}') as fh:
             content = fh.read()
 
         http_headers = self.form_http_headers(

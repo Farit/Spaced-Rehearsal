@@ -38,6 +38,7 @@
 
         <script src="d3.js"></script>
         <script src="d3-scale.js"></script>
+        <script src="d3-scale-chromatic.js"></script>
         <script>
             class HorizontalBarByDate {
                 constructor(el) {
@@ -90,6 +91,8 @@
                     this.xScale = d3.scaleLinear()
                         .domain([0, max_xScale_value + 10])
                         .range([0, this.xAxisWidth]);
+                    this.barColour = d3.scaleSequential(d3.interpolateGnBu)
+                        .domain([1, max_xScale_value + 10]);
 
                     this.createSvg();
                     this._render_x_axis();
@@ -212,7 +215,8 @@
                            return self.xScale(d.value);
                        })
                        .attr('fill', function(d){
-                            return '#B0C4DE';
+                            //return '#B0C4DE';
+                           return self.barColour(d.value);
                        });
 
                     this.bars.append('text')
