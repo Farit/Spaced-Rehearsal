@@ -6,12 +6,13 @@ CREATE TABLE IF NOT EXISTS flashcards(
     side_a CHARACTER VARYING(2048) NOT NULL,
     side_b CHARACTER VARYING(2048) NOT NULL,
     phonetic_transcriptions TEXT,
-    comments TEXT,
     explanation TEXT,
     examples TEXT,
     source CHARACTER VARYING(2048),
     box INTEGER NOT NULL,
     due TIMESTAMP NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    retention_origin_date TIMESTAMP NOT NULL,
+    retention_current_date TIMESTAMP NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(id)
 );

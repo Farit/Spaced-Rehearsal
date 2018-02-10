@@ -91,19 +91,31 @@ class Play:
             if is_timeout:
                 result = TermColor.red('Timeout')
                 box = 0
+                utc_now = datetime_utc_now()
+                retention_origin_date = utc_now
+                retention_current_date = utc_now
                 self.timeout += 1
             else:
                 result = TermColor.green('Right')
                 box = flashcard['box'] + 1
+                retention_origin_date = flashcard['retention_origin_date']
+                retention_current_date = datetime_utc_now()
                 self.right += 1
         else:
             result = TermColor.red('Wrong')
             box = 0
+            utc_now = datetime_utc_now()
+            retention_origin_date = utc_now
+            retention_current_date = utc_now
             self.wrong += 1
 
         due = datetime_utc_now() + timedelta(days=2**box)
         self.db_session.update_flashcard(
-            due=due, box=box, flashcard_id=flashcard['id']
+            due=due,
+            box=box,
+            retention_origin_date=retention_origin_date,
+            retention_current_date=retention_current_date,
+            flashcard_id=flashcard['id']
         )
 
         await self.print_flashcard_score(flashcard, result)

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from src.utils import normalize_value
+from src.utils import normalize_value, datetime_utc_now
 
 
 class Field:
@@ -59,6 +59,20 @@ class Due(Field):
         super().__set__(instance, value)
 
 
+class RetentionOriginDate(Field):
+    def __set__(self, instance, value):
+        if not isinstance(value, datetime):
+            raise TypeError(f'{self.name}: {value!r} must be datetime')
+        super().__set__(instance, value)
+
+
+class RetentionCurrentDate(Field):
+    def __set__(self, instance, value):
+        if not isinstance(value, datetime):
+            raise TypeError(f'{self.name}: {value!r} must be datetime')
+        super().__set__(instance, value)
+
+
 class Source(Field):
 
     def __init__(self):
@@ -102,11 +116,14 @@ class Flashcard(metaclass=FlashcardMetaclass):
     phonetic_transcriptions = PhoneticTranscriptions()
     explanation = Explanation()
     examples = Examples()
+    retention_origin_date = RetentionOriginDate()
+    retention_current_date = RetentionCurrentDate()
 
     def __init__(
         self, *, user_id, id=None, side_a=None, side_b=None, box=None,
         due=None, source=None, phonetic_transcriptions=None,
-        explanation=None, examples=None, created=None
+        explanation=None, examples=None, created=None,
+        retention_origin_date=None, retention_current_date=None
     ):
         self.id = id
         self.user_id = user_id
@@ -119,6 +136,16 @@ class Flashcard(metaclass=FlashcardMetaclass):
         self.explanation = explanation
         self.examples = examples
         self.created = created
+
+        utc_now = datetime_utc_now()
+        self.retention_origin_date = (
+            utc_now if retention_origin_date is None
+            else retention_origin_date
+        )
+        self.retention_current_date = (
+            utc_now if retention_current_date is None
+            else retention_current_date
+        )
 
     def __str__(self):
         return f'[{self.side_a}] / [{self.side_b}]'

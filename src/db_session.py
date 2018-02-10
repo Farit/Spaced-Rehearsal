@@ -170,19 +170,27 @@ class DBSession:
         self.db_cursor.execute(
             'insert into flashcards'
             '(user_id, side_a, side_b, box, due, source,'
-            ' explanation, examples, phonetic_transcriptions, created)'
-            'values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+            ' explanation, examples, phonetic_transcriptions, created, '
+            ' retention_origin_date, retention_current_date)'
+            'values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
             (flashcard['user_id'], flashcard['side_a'], flashcard['side_b'],
              flashcard['box'], flashcard['due'], flashcard['source'],
              flashcard['explanation'], flashcard['examples'],
-             flashcard['phonetic_transcriptions'], datetime_utc_now())
+             flashcard['phonetic_transcriptions'], datetime_utc_now(),
+             flashcard['retention_origin_date'],
+             flashcard['retention_current_date'])
         )
         self.db_conn.commit()
 
-    def update_flashcard(self, due, box, flashcard_id):
+    def update_flashcard(
+            self, due, box, retention_origin_date, retention_current_date,
+            flashcard_id
+    ):
         self.db_cursor.execute(
-            'update flashcards set due=?, box=? where id=?',
-            (due, box, flashcard_id)
+            'update flashcards set due=?, box=?, retention_origin_date=?, '
+            'retention_current_date=? where id=?',
+            (due, box, retention_origin_date, retention_current_date,
+             flashcard_id)
         )
         self.db_conn.commit()
 
