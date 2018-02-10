@@ -1,3 +1,4 @@
+import string
 import json
 import re
 import asyncio
@@ -57,8 +58,15 @@ class WebServer(asyncio.Protocol):
 
     def index_page_response(self):
         with open('web_server/index.html') as fh:
-            content = fh.read()
+            content_template = string.Template(fh.read())
 
+        num_of_flashcards = self.db_session.count_flashcards(
+            user_id=self.USER_ID
+        )
+        content = content_template.substitute(
+            num_of_flashcards=num_of_flashcards
+        )
+        
         http_headers = self.form_http_headers(
             content_length=len(content),
             content_type='text/html'

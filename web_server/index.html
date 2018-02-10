@@ -8,15 +8,21 @@
 
         <title>Spaced rehearsal</title>
         <style>
+            .center{
+                max-width: 1200px;
+                padding: 5px;
+                margin: 0 auto;
+            }
             header {
                 display: flex;
+                align-items: center;
+                justify-content: space-around;
                 height: 50px;
-                margin-bottom: 5px;
+                font-size: 22px;
             }
             #main-container {
                 display: flex;
                 justify-content: space-around;
-                padding: 5px;
             }
             #main-container .panel {
                 flex: 1 1;
@@ -26,8 +32,10 @@
     </head>
 
     <body>
-        <header></header>
-        <div id="main-container">
+        <header class="center">
+            <div>The number of flashcards is $num_of_flashcards</div>
+        </header>
+        <div id="main-container" class="center">
             <div class="panel left-panel">
                 <div id="vis-by-date"></div>
             </div>
