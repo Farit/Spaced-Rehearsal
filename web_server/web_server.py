@@ -1,106 +1,77 @@
-import string
-import json
-import re
 import asyncio
 
 from src.config import ConfigAdapter
 from src.db_session import DBSession
+from .web_app import WebApp
 
 
 class WebServer(asyncio.Protocol):
-    USER_ID = None
 
     def __init__(self):
         self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
+        self.headers_set = None
+        self.request_method = None
+        self.request_version = None
+        self.path = None
+
+    @classmethod
+    def set_app(cls, user_id):
+        cls.application = WebApp(user_id=user_id)
+
+    def get_environ(self):
+        env = dict()
+        env['REQUEST_METHOD'] = self.request_method  # GET
+        env['PATH_INFO'] = self.path  # /hello
+        return env
 
     def connection_made(self, transport):
         peername = transport.get_extra_info('peername')
         self.transport = transport
 
     def data_received(self, data):
-        message = data.decode('utf-8')
-        path = self.get_path(message)
+        try:
+            self.prepare()
+            data = data.decode('utf-8')
+            response = self.handle_one_request(data)
+            self.transport.write(response.encode('utf-8'))
+        finally:
+            self.transport.close()
 
-        if path == '/':
-            http_response = self.index_page_response()
-        elif path == '/d3.js':
-            http_response = self.d3_js_response(d3_file='d3.js')
-        elif path == '/d3-scale.js':
-            http_response = self.d3_js_response(d3_file='d3-scale.js')
-        elif path == '/d3-scale-chromatic.js':
-            http_response = self.d3_js_response(d3_file='d3-scale-chromatic.js')
-        elif path == '/vis_by_date.json':
-            http_response = self.vis_by_date_response()
-        else:
-            http_response = self.not_found_response()
+    def prepare(self):
+        self.headers_set = []
+        self.request_method = None
+        self.request_version = None
+        self.path = None
 
-        self.transport.write(http_response.encode('utf-8'))
-        self.transport.close()
+    def handle_one_request(self, request_data):
+        self.parse_request(request_data)
+        env = self.get_environ()
+        result = self.application(env, self.start_response)
+        return self.finish_response(result)
 
-    @staticmethod
-    def get_path(message):
-        lines = message.split('\r\n')
-        get_line = lines[0]
-        path = re.match(r'GET\s*(?P<path>.*)\s*HTTP.*', get_line)['path']
-        return path.strip()
+    def parse_request(self, text):
+        request_line = text.splitlines()[0]
+        request_line = request_line.rstrip('\r\n')
+        (
+            self.request_method,  # GET
+            self.path,            # /hello
+            self.request_version  # HTTP/1.1
+        ) = request_line.split()
 
-    @staticmethod
-    def form_http_headers(content_length, content_type):
-        http_headers = """\
-            HTTP/1.1 200 OK
-            Content-Length: {content_length}
-            Content-type: {content_type}
-            Connection: Closed
+    def start_response(self, status, response_headers):
+        server_headers = [
+            ('Date', 'Sun, 11 Feb 2018 12:05:48 GMT'),
+            ('Server', 'SpacedRehearsalServer 0.1')
+        ]
+        self.headers_set = [status, response_headers + server_headers]
 
-        """.format(content_type=content_type, content_length=content_length)
-        return http_headers
-
-    def index_page_response(self):
-        with open('web_server/index.html') as fh:
-            content_template = string.Template(fh.read())
-
-        num_of_flashcards = self.db_session.count_flashcards(
-            user_id=self.USER_ID
-        )
-        content = content_template.substitute(
-            num_of_flashcards=num_of_flashcards
-        )
-        
-        http_headers = self.form_http_headers(
-            content_length=len(content),
-            content_type='text/html'
-        )
-
-        return http_headers + content
-
-    def d3_js_response(self, d3_file):
-        with open(f'web_server/{d3_file}') as fh:
-            content = fh.read()
-
-        http_headers = self.form_http_headers(
-            content_length=len(content),
-            content_type='text/html'
-        )
-
-        return http_headers + content
-
-    def vis_by_date_response(self):
-        data = self.db_session.get_vis_by_date(user_id=self.USER_ID)
-        content = json.dumps(data)
-        http_headers = self.form_http_headers(
-            content_length=len(content),
-            content_type='application/json'
-        )
-        return http_headers + content
-
-    @staticmethod
-    def not_found_response():
-        http_headers = """\
-            HTTP/1.1 404
-            Connection: Closed
-
-        """
-        return http_headers
-
-
+    def finish_response(self, result):
+        status, response_headers = self.headers_set
+        response = f'HTTP/1.1 {status}\r\n'
+        for header_key, header_value in response_headers:
+            response += f'{header_key}: {header_value}\r\n'
+        response += '\r\n'
+        for data in result:
+            response += data
+        return response
