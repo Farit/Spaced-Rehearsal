@@ -3,8 +3,22 @@ import time
 import datetime
 import string
 
+from functools import partial
 
-class TermColor:
+
+class TermColorMetaClass(type):
+
+    def __getattr__(cls, item):
+        colours = [
+            'red', 'yellow', 'green', 'grey', 'purple', 'light_blue',
+            'bold', 'underline'
+        ]
+        if item in colours:
+            return partial(cls.to_colour, colour=item)
+        return super().__getattribute__(item)
+
+
+class TermColor(metaclass=TermColorMetaClass):
     """
     Why we need \001 and \002 escapes, answer provided from the
     https://bugs.python.org/issue20359:
@@ -31,53 +45,31 @@ class TermColor:
             http://stackoverflow.com/questions/9468435/look-how-to-fix-column-calculation-in-python-readline-if-use-color-prompt
         [3] http://gnometerminator.blogspot.sg/p/introduction.html
         [4] http://en.wikipedia.org/wiki/Control_character#Display
+
+    Examples:
+        TermColor.red('hello')
+        TermColor.red('hello', is_escape_seq=True)
+
     """
-    RED = '\x01\033[31m\x02'
-    GREEN = '\x01\033[32m\x02'
-    YELLOW = '\x01\033[33m\x02'
-    BLUE = '\x01\033[34m\x02'
-    LIGHT_BLUE = '\x01\033[1;34m\x02'
-    PURPLE = '\x01\033[35m\x02'
-    GREY = '\x01\033[1;30m\x02'
-    END = '\x01\033[0m\x02'
-    BOLD = '\x01\033[1m\x02'
-    UNDERLINE = '\x01\033[4m\x02'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    LIGHT_BLUE = '\033[1;34m'
+    PURPLE = '\033[35m'
+    GREY = '\033[1;30m'
+    END = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
     @classmethod
-    def coloralize(cls, color, string_to_color):
-        return color + string_to_color + cls.END
-
-    @classmethod
-    def red(cls, string_to_color):
-        return cls.coloralize(cls.RED, string_to_color)
-
-    @classmethod
-    def yellow(cls, string_to_color):
-        return cls.coloralize(cls.YELLOW, string_to_color)
-
-    @classmethod
-    def green(cls, string_to_color):
-        return cls.coloralize(cls.GREEN, string_to_color)
-
-    @classmethod
-    def grey(cls, string_to_color):
-        return cls.coloralize(cls.GREY, string_to_color)
-
-    @classmethod
-    def purple(cls, string_to_color):
-        return cls.coloralize(cls.PURPLE, string_to_color)
-
-    @classmethod
-    def light_blue(cls, string_to_color):
-        return cls.coloralize(cls.LIGHT_BLUE, string_to_color)
-
-    @classmethod
-    def bold(cls, string_to_color):
-        return cls.coloralize(cls.BOLD, string_to_color)
-
-    @classmethod
-    def underline(cls, string_to_color):
-        return cls.coloralize(cls.UNDERLINE, string_to_color)
+    def to_colour(cls, string_to_colour, *, colour, is_escape_seq=False):
+        colour = getattr(cls, colour.upper())
+        end = cls.END
+        if is_escape_seq:
+            colour = f'\x01{colour}\x02'
+            end = f'\x01{end}\x02'
+        return colour + string_to_colour + end
 
 
 def datetime_now():
