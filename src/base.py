@@ -37,7 +37,7 @@ class AsyncIO:
         await asyncio.sleep(self.wait_timeout)
 
     async def input(self, msg, pre_fill=''):
-        message = TermColor.grey(f'[{msg}] ->: ')
+        message = TermColor.grey(f'[{msg}] ->: ', is_escape_seq=True)
         future = self.loop.run_in_executor(
             None, self.blocking_input, message, pre_fill
         )
