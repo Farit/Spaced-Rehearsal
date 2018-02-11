@@ -65,16 +65,16 @@ class AddFlashcard:
 
         await self.async_io.print_formatted_output(output=[
             TermColor.bold('Adding flashcard'),
-            f'{TermColor.ligth_blue("Side A:")} {flashcard.side_a}',
-            f'{TermColor.ligth_blue("Side B:")} {flashcard.side_b}',
-            f'{TermColor.ligth_blue("Box:")} {flashcard.box}',
-            f'{TermColor.ligth_blue("Due:")} {flashcard.due}',
-            f'{TermColor.ligth_blue("Source:")} {flashcard.source}',
-            f'{TermColor.ligth_blue("Phonetic transcriptions:")} '
+            f'{TermColor.light_blue("Side A:")} {flashcard.side_a}',
+            f'{TermColor.light_blue("Side B:")} {flashcard.side_b}',
+            f'{TermColor.light_blue("Box:")} {flashcard.box}',
+            f'{TermColor.light_blue("Due:")} {flashcard.due}',
+            f'{TermColor.light_blue("Source:")} {flashcard.source}',
+            f'{TermColor.light_blue("Phonetic transcriptions:")} '
             f'{flashcard.phonetic_transcriptions}',
-            f'{TermColor.ligth_blue("Explanation:")} '
+            f'{TermColor.light_blue("Explanation:")} '
             f'{flashcard.explanation}',
-            f'{TermColor.ligth_blue("Examples:")} {flashcard.examples}',
+            f'{TermColor.light_blue("Examples:")} {flashcard.examples}',
         ])
 
         action_msgs = []
