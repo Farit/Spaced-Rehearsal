@@ -1,3 +1,4 @@
+import bisect
 import random
 import sqlite3
 
@@ -217,7 +218,23 @@ class DBSession:
             (user_id, )
         )
         data = []
+        dates = []
+        now = datetime_utc_now().strftime("%Y-%m-%d")
+        has_now_as_date = False
         for row in query:
             datum = self.zip_row(row=row)
+            date = datum['key']
+            if date == now:
+                has_now_as_date = True
+            dates.append(date)
             data.append(datum)
+
+        if not has_now_as_date:
+            if not data:
+                data.append({'key': now, 'value': 0})
+            else:
+                data.insert(
+                    bisect.bisect_left(dates, now),
+                    {'key': now, 'value': 0}
+                )
         return data
