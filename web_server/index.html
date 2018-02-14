@@ -8,8 +8,11 @@
 
         <title>Spaced rehearsal</title>
         <style>
+            * {
+                box-sizing: border-box;
+            }
             .center{
-                max-width: 1200px;
+                max-width: 800px;
                 padding: 5px;
                 margin: 0 auto;
             }
@@ -36,10 +39,8 @@
             <div>The number of flashcards is $num_of_flashcards</div>
         </header>
         <div id="main-container" class="center">
-            <div class="panel left-panel">
+            <div class="panel">
                 <div id="vis-by-date"></div>
-            </div>
-            <div class="panel right-panel">
             </div>
         </div>
 
@@ -157,7 +158,7 @@
                                 return 'black';
                             }
                             else{
-                                return '#DDDDDD';
+                                return '#AAAAAA';
                             }
                         });
                 }
@@ -192,7 +193,7 @@
                         .attr("dy", '-1.8em')
                         .style("text-anchor", "middle")
                         .attr("font-size", '20px')
-                        .attr("font-variant", 'small-caps')
+                        .attr("fill", '#AAAAAA')
                         .text("flashcards");
 
                 }
