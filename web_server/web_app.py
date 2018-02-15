@@ -29,9 +29,12 @@ class Response:
 
 class WebApp:
 
-    def __init__(self, user_id):
+    def __init__(self, user_id=None):
         self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
+        self.user_id = user_id
+
+    def set_user_id(self, user_id):
         self.user_id = user_id
 
     def __call__(self, environ, start_response):
@@ -47,29 +50,44 @@ class WebApp:
                 break
 
         if response is None:
-            response: Response = Response('404')
+            response: Response = Response(
+                status='404',
+                headers=[
+                    ('Content-Type', 'text/plain')
+                ],
+                data="Page not found."
+            )
 
         start_response(response.status, response.headers)
         return response.data
 
     @route('GET', '/')
     def index(self):
-        with open('web_server/index.html') as fh:
-            content_template = string.Template(fh.read())
+        if self.user_id is None:
+            response = Response(
+                status='401',
+                headers=[
+                    ('Content-Type', 'text/plain')
+                ],
+                data="Authorization is required."
+            )
+        else:
+            with open('web_server/index.html') as fh:
+                content_template = string.Template(fh.read())
 
-        num_of_flashcards = self.db_session.count_flashcards(
-            user_id=self.user_id
-        )
-        content = content_template.substitute(
-            num_of_flashcards=num_of_flashcards
-        )
-        response = Response(
-            status='200 OK',
-            headers=[
-                ('Content-Type', 'text/html')
-            ],
-            data=content
-        )
+            num_of_flashcards = self.db_session.count_flashcards(
+                user_id=self.user_id
+            )
+            content = content_template.substitute(
+                num_of_flashcards=num_of_flashcards
+            )
+            response = Response(
+                status='200 OK',
+                headers=[
+                    ('Content-Type', 'text/html')
+                ],
+                data=content
+            )
         return response
 
     @route('GET', '/d3.js')

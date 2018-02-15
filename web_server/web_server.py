@@ -6,6 +6,7 @@ from .web_app import WebApp
 
 
 class WebServer(asyncio.Protocol):
+    application = None
 
     def __init__(self):
         self.config = ConfigAdapter(filename='config.cfg')
@@ -16,8 +17,12 @@ class WebServer(asyncio.Protocol):
         self.path = None
 
     @classmethod
-    def set_app(cls, user_id):
-        cls.application = WebApp(user_id=user_id)
+    def set_app(cls):
+        cls.application = WebApp()
+
+    @classmethod
+    def set_user_id(cls, user_id):
+        cls.application.set_user_id(user_id)
 
     def get_environ(self):
         env = dict()

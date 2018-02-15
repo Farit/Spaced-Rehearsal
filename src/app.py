@@ -63,6 +63,7 @@ class SpacedRehearsal:
     async def login(self):
         try:
             address, port = self.web_server.sockets[0].getsockname()
+            WebServer.set_app()
             await self.async_io.print(
                 f'Web server is running on http://{address}:{port}'
             )
@@ -100,7 +101,7 @@ class SpacedRehearsal:
 
             else:
                 self.user = self.db_session.get_user(login_name)
-                WebServer.set_app(user_id=self.user['id'])
+                WebServer.set_user_id(user_id=self.user['id'])
                 self.add_flashcard = AddFlashcard(
                     user_id=self.user['id'], async_io=self.async_io
                 )
