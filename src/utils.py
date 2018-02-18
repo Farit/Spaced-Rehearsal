@@ -87,13 +87,18 @@ def datetime_utc_now():
 
 def datetime_change_timezone(datetime_obj, *, offset):
     assert isinstance(offset, (float, int)), f'received: {offset!r}'
-    in_utc = (datetime_obj - datetime_obj.utcoffset()).replace(
-        tzinfo=datetime.timezone.utc
-    )
+    if datetime_obj.utcoffset() is not None:
+        datetime_obj = datetime_obj - datetime_obj.utcoffset()
+    in_utc = datetime_obj.replace(tzinfo=datetime.timezone.utc)
 
     offset = offset if offset >= 0 else -offset
     to_tz = datetime.timezone(datetime.timedelta(seconds=offset))
     return (in_utc + datetime.timedelta(seconds=offset)).replace(tzinfo=to_tz)
+
+
+def convert_datetime_to_local(datetime_obj: datetime):
+    if datetime_obj is not None:
+        return datetime_change_timezone(datetime_obj, offset=time.timezone)
 
 
 def normalize_value(value, *, remove_trailing=None, to_lower=False):

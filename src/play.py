@@ -1,49 +1,43 @@
 import textwrap
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from src.db_session import DBSession
 from src.config import ConfigAdapter
-from src.utils import TermColor, normalize_value, datetime_utc_now
+from src.utils import TermColor, normalize_value
 from src.base import AsyncIO
+from src.flashcard import Flashcard
+from src.scheduler import FlashcardScheduler
 
 
 class Play:
     def __init__(self, user_id: int, async_io: AsyncIO):
-        self.total = 0
-        self.count = 0
-        self.played = 0
-        self.right = 0
-        self.wrong = 0
-        self.timeout = 0
         self.user_id = user_id
         self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
         self.async_io = async_io
-
-    def counters_zeroing(self):
-        self.total = 0
-        self.count = 0
-        self.played = 0
-        self.right = 0
-        self.wrong = 0
-        self.timeout = 0
+        self.stats = None
 
     async def play(self):
-        self.counters_zeroing()
-        start_time = datetime.now()
         flashcards = self.db_session.get_ready_flashcards(user_id=self.user_id)
-        self.total = len(flashcards)
+        self.stats = {
+            'start_time': datetime.now(),
+            'total': len(flashcards),
+            'count': 0,
+            'played': 0,
+            'right': 0,
+            'wrong': 0
+        }
 
         await self.async_io.print(
             f'Pressing {TermColor.red("Ctrl+D")} terminates playing.'
         )
         for flashcard in flashcards:
-            self.count += 1
+            self.stats['count'] += 1
             await self._play_flashcard(flashcard)
-            self.played += 1
+            self.stats['played'] += 1
 
-            if self.played < self.total:
+            if self.stats['played'] < self.stats['total']:
                 action = await self.async_io.input_action(
                     action_answers=('y', 'n'),
                     action_msgs=[
@@ -54,81 +48,51 @@ class Play:
                 if action == 'n':
                     break
 
-        end_time = datetime.now()
-        playing_time = end_time - start_time
-        await self.print_game_score(playing_time)
+        await self.print_game_score()
 
-    async def _play_flashcard(self, flashcard):
-        header = f'Flashcard[{flashcard["id"]}] #{self.count} / #{self.total}'
-        await self.async_io.print(TermColor.bold(header))
-        await self.print_flashcard_side_a(flashcard)
-
-        start_time = datetime.now()
-        entered_side_b = await self.async_io.input('Side B')
-        end_time = datetime.now()
-
-        answer_timeout = self.config.get('play', 'answer_timeout')
-        is_timeout = False
-        if answer_timeout != 'none':
-            try:
-                answer_timeout = int(answer_timeout)
-            except ValueError:
-                raise ValueError(
-                    f'Answer timeout must have a valid value: "none" or integer'
-                )
-            is_timeout = (end_time - start_time) > timedelta(
-                seconds=answer_timeout
-            )
-
-        entered_side_b = normalize_value(
-            entered_side_b, remove_trailing='.', to_lower=True
-        )
-        flashcard_side_b = normalize_value(
-            flashcard['side_b'], remove_trailing='.', to_lower=True
+    async def _play_flashcard(self, flashcard: Flashcard):
+        scheduler = FlashcardScheduler(
+            flashcard_answer_side=flashcard.side_answer,
+            current_state=flashcard.state,
+            current_review_timestamp=flashcard.review_timestamp
         )
 
-        if entered_side_b == flashcard_side_b:
-            if is_timeout:
-                result = TermColor.red('Timeout')
-                box = 0
-                utc_now = datetime_utc_now()
-                retention_origin_date = utc_now
-                retention_current_date = utc_now
-                self.timeout += 1
-            else:
-                result = TermColor.green('Right')
-                box = flashcard['box'] + 1
-                retention_origin_date = flashcard['retention_origin_date']
-                retention_current_date = datetime_utc_now()
-                self.right += 1
-        else:
-            result = TermColor.red('Wrong')
-            box = 0
-            utc_now = datetime_utc_now()
-            retention_origin_date = utc_now
-            retention_current_date = utc_now
-            self.wrong += 1
-
-        due = datetime_utc_now() + timedelta(days=2**box)
-        self.db_session.update_flashcard(
-            due=due,
-            box=box,
-            retention_origin_date=retention_origin_date,
-            retention_current_date=retention_current_date,
-            flashcard_id=flashcard['id']
-        )
-
-        await self.print_flashcard_score(flashcard, result)
-
-    async def print_flashcard_side_a(self, flashcard):
+        await self.async_io.print(TermColor.bold(
+            f'Flashcard[{flashcard.flashcard_id}] '
+            f'#{self.stats["count"]} / #{self.stats["total"]}'
+        ))
         await self.async_io.print_formatted_output(output=[
-            f'{TermColor.grey("Side A: ")}{flashcard["side_a"]}'
+            f'{TermColor.grey("Question: ")}{flashcard["side_question"]}'
         ])
+
+        entered_answer = await self.async_io.input('Answer')
+        entered_answer = normalize_value(
+            entered_answer, remove_trailing='.', to_lower=True
+        )
+        flashcard_side_answer = normalize_value(
+            flashcard['side_answer'], remove_trailing='.', to_lower=True
+        )
+
+        if entered_answer == flashcard_side_answer:
+            scheduler.to_success()
+            self.stats['right'] += 1
+            result = TermColor.green('Right')
+        else:
+            scheduler.to_failure()
+            self.stats['wrong'] += 1
+            result = TermColor.red('Wrong')
+
+        flashcard.state = scheduler.next_state
+        flashcard.review_timestamp = scheduler.next_review_timestamp
+
+        self.db_session.update_flashcard_state(flashcard)
+        await self.print_flashcard_score(flashcard, result)
 
     async def print_flashcard_score(self, flashcard, result):
         output = [
             f'{TermColor.grey("Result: ")}{result}',
-            f'{TermColor.grey("Answer: ")}{flashcard["side_b"]}',
+            f'{TermColor.grey("Answer: ")}{flashcard["side_answer"]}',
+            f'{TermColor.grey("Next review: ")}{flashcard["review_timestamp"]}',
         ]
 
         source = (flashcard["source"] or "").strip()
@@ -149,31 +113,30 @@ class Play:
                 f'{TermColor.grey("Explanation: ")}{explanation}'
             )
 
-        examples = (flashcard["examples"] or "").strip()
+        examples = flashcard.get_examples()
         if examples:
             output.append(f'{TermColor.grey("Examples: ")}')
-            examples = examples.split(';')
             examples.sort(reverse=True)
             for ind, example in enumerate(examples, start=1):
                 example = example.strip()
                 if example:
-                    formated_example = f'{ind}: {example}'
-                    output.append(textwrap.indent(formated_example, ' '*4))
+                    formatted_example = f'{ind}: {example}'
+                    output.append(textwrap.indent(formatted_example, ' '*4))
 
         await self.async_io.print_formatted_output(output)
 
-    async def print_game_score(self, playing_time=None):
+    async def print_game_score(self):
         output = []
-        if playing_time is not None:
-            output.append(
-                f'Playing time: {playing_time}'
-            )
-        output.extend([
-            f'Total: {self.total}, '
-            f'Played: {self.played}, ',
-            f'Right: {self.right}, '
-            f'Wrong: {self.wrong}, '
-            f'Timeout: {self.timeout}',
-            f'Game is over!'
-        ])
+        end_time = datetime.now()
+        if self.stats is not None:
+            playing_time = end_time - self.stats['start_time']
+            output.extend([
+                f'Playing time: {playing_time}',
+                f'Total: {self.stats["total"]}, '
+                f'Played: {self.stats["played"]}, ',
+                f'Right: {self.stats["right"]}, '
+                f'Wrong: {self.stats["wrong"]}, '
+            ])
+
+        output.append( f'Game is over!')
         await self.async_io.print(*output)

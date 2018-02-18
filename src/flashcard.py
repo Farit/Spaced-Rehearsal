@@ -1,6 +1,10 @@
-from datetime import datetime
+import re
+
+from datetime import datetime, timedelta
+from typing import Optional, List
 
 from src.utils import normalize_value, datetime_utc_now
+from src.scheduler import FlashcardState
 
 
 class Field:
@@ -26,7 +30,7 @@ class FlashcardMetaclass(type):
                 attr.name = attr_name
 
 
-class Side(Field):
+class OptionalStr(Field):
     def __set__(self, instance, value):
         if not isinstance(value, (str, type(None))):
             raise TypeError(f'{self.name}: {value!r} must be str or None')
@@ -37,118 +41,138 @@ class Side(Field):
         super().__set__(instance, value)
 
 
-class SideA(Side):
-    pass
-
-
-class SideB(Side):
-    pass
-
-
-class Box(Field):
+class Integer(Field):
     def __set__(self, instance, value):
-        if not isinstance(value, int):
-            raise TypeError(f'{self.name}: {value!r} must be int')
+        if not isinstance(value, (int, type(None))):
+            raise TypeError(f'{self.name}: {value!r} must be integer')
         super().__set__(instance, value)
 
 
-class Due(Field):
+class OptionalInt(Field):
+    def __set__(self, instance, value):
+        if not isinstance(value, (int, type(None))):
+            raise TypeError(f'{self.name}: {value!r} must be int or None')
+        super().__set__(instance, value)
+
+
+class OptionalDateTime(Field):
     def __set__(self, instance, value):
         if not isinstance(value, (datetime, type(None))):
             raise TypeError(f'{self.name}: {value!r} must be datetime or None')
         super().__set__(instance, value)
 
 
-class RetentionOriginDate(Field):
+class OptionalFlashcardState(Field):
     def __set__(self, instance, value):
-        if not isinstance(value, datetime):
-            raise TypeError(f'{self.name}: {value!r} must be datetime')
-        super().__set__(instance, value)
-
-
-class RetentionCurrentDate(Field):
-    def __set__(self, instance, value):
-        if not isinstance(value, datetime):
-            raise TypeError(f'{self.name}: {value!r} must be datetime')
-        super().__set__(instance, value)
-
-
-class Source(Field):
-
-    def __init__(self):
-        super().__init__()
-
-    def __set__(self, instance, value):
-        if not isinstance(value, (str, type(None))):
-            raise TypeError(f'{self.name}: {value!r} must be str or None')
-
-        value = value.strip() if value else value
-        super().__set__(instance, value)
-
-
-class PhoneticTranscriptions(Field):
-    def __set__(self, instance, value):
-        if not isinstance(value, (str, type(None))):
-            raise TypeError(f'{self.name}: {value!r} must be str or None')
-        super().__set__(instance, value)
-
-
-class Explanation(Field):
-    def __set__(self, instance, value):
-        if not isinstance(value, (str, type(None))):
-            raise TypeError(f'{self.name}: {value!r} must be str or None')
-        super().__set__(instance, value)
-
-
-class Examples(Field):
-    def __set__(self, instance, value):
-        if not isinstance(value, (str, type(None))):
-            raise TypeError(f'{self.name}: {value!r} must be str or None')
+        if not isinstance(value, (FlashcardState, type(None))):
+            raise TypeError(f'{self.name}: {value!r} must be state or None')
         super().__set__(instance, value)
 
 
 class Flashcard(metaclass=FlashcardMetaclass):
-    side_a = SideA()
-    side_b = SideB()
-    box = Box()
-    due = Due()
-    source = Source()
-    phonetic_transcriptions = PhoneticTranscriptions()
-    explanation = Explanation()
-    examples = Examples()
-    retention_origin_date = RetentionOriginDate()
-    retention_current_date = RetentionCurrentDate()
+    user_id = Integer()
+    flashcard_id = OptionalInt()
+    side_question = OptionalStr()
+    side_answer = OptionalStr()
+    phonetic_transcriptions = OptionalStr()
+    source = OptionalStr()
+    explanation = OptionalStr()
+    examples = OptionalStr()
+    created = OptionalDateTime()
+    review_timestamp = OptionalDateTime()
+    state = OptionalFlashcardState()
 
     def __init__(
-        self, *, user_id, id=None, side_a=None, side_b=None, box=None,
-        due=None, source=None, phonetic_transcriptions=None,
-        explanation=None, examples=None, created=None,
-        retention_origin_date=None, retention_current_date=None
+        self, *,
+        user_id: int,
+        flashcard_id: Optional[int]=None,
+        side_question: Optional[str]=None,
+        side_answer: Optional[str]=None,
+        phonetic_transcriptions: Optional[str]=None,
+        source: Optional[str]=None,
+        explanation: Optional[str]=None,
+        examples: Optional[str]=None,
+        created: Optional[datetime]=None,
+        review_timestamp: Optional[datetime]=None,
+        state: Optional[FlashcardState]=None
     ):
-        self.id = id
+        self.flashcard_id = flashcard_id
         self.user_id = user_id
-        self.side_a = side_a
-        self.side_b = side_b
-        self.box = 0 if box is None else box
-        self.due = due
+        self.side_question = side_question
+        self.side_answer = side_answer
+        self.review_timestamp = review_timestamp
         self.source = source
         self.phonetic_transcriptions = phonetic_transcriptions
         self.explanation = explanation
         self.examples = examples
         self.created = created
 
-        utc_now = datetime_utc_now()
-        self.retention_origin_date = (
-            utc_now if retention_origin_date is None
-            else retention_origin_date
-        )
-        self.retention_current_date = (
-            utc_now if retention_current_date is None
-            else retention_current_date
-        )
+        self.set_state(state)
+
+    def get_examples(self):
+        examples = (self.examples or "").strip()
+        return examples.split(';') if examples else []
+
+    def set_examples(self, examples: List[str]):
+        self.examples = ';'.join(examples)
+
+    def set_state(self, state):
+        if state is None:
+            self.state = None
+
+        elif isinstance(state, FlashcardState):
+            self.state = state
+
+        elif isinstance(state, str):
+            match = re.match(
+                r'''
+                    ^(?P<state>.+);
+                    (?P<answer_difficulty>.+);
+                    (?P<delay>.+);
+                    (?P<mem_strength>.+)$
+                ''',
+                state,
+                flags=re.VERBOSE
+            )
+            if match:
+                state = match.group('state')
+                answer_difficulty = float(match.group('answer_difficulty'))
+                delay = int(match.group('delay'))
+                mem_strength = match.group('mem_strength')
+                mem_strength = (
+                    int(mem_strength) if mem_strength != 'None' else None
+                )
+                self.state = FlashcardState(
+                    state=state, answer_difficulty=answer_difficulty,
+                    delay=delay, mem_strength=mem_strength
+                )
+            else:
+                raise ValueError(
+                    f'State {state!r} has inappropriate format, must be '
+                    f'"state;answer_difficulty;delay;mem_strength"'
+                )
+
+        else:
+            raise TypeError(f'Value {state!r} must be state or str')
 
     def __str__(self):
-        return f'[{self.side_a}] / [{self.side_b}]'
+        return f'[{self.side_question}] / [{self.side_answer}]'
 
     def __getitem__(self, item):
         return getattr(self, item)
+
+    def __iter__(self):
+        return iter([
+            ('flashcard_id', self.flashcard_id),
+            ('user_id', self.user_id),
+            ('side_question', self.side_question),
+            ('side_answer', self.side_answer),
+            ('review_timestamp', self.review_timestamp),
+            ('source', self.source),
+            ('phonetic_transcriptions', self.phonetic_transcriptions),
+            ('explanation', self.explanation),
+            ('examples', self.examples),
+            ('created', self.created),
+            ('state', self.state),
+        ])
+

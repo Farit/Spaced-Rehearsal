@@ -1,11 +1,12 @@
 from collections import deque
-from datetime import timedelta
+from typing import List
 
 from src.db_session import DBSession
 from src.flashcard import Flashcard
 from src.config import ConfigAdapter
-from src.utils import TermColor, datetime_utc_now
+from src.utils import TermColor, datetime_utc_now, convert_datetime_to_local
 from src.base import AsyncIO
+from src.scheduler import FlashcardScheduler
 
 
 class AddFlashcard:
@@ -22,14 +23,14 @@ class AddFlashcard:
             self.previous_sources.popleft()
 
     async def add(self):
-        flashcard = Flashcard(user_id=self.user_id)
+        flashcard: Flashcard = Flashcard(user_id=self.user_id)
         await self.async_io.print(
             f'Pressing {TermColor.red("Ctrl+D")} terminates adding.',
             TermColor.bold('New flashcard:')
         )
 
-        flashcard.side_a = await self.async_io.input('Side A')
-        flashcard.side_b = await self.async_io.input('Side B')
+        flashcard.side_question = await self.async_io.input('Question')
+        flashcard.side_answer = await self.async_io.input('Answer')
 
         source = await self.async_io.input(
             'Source',
@@ -56,19 +57,25 @@ class AddFlashcard:
         while example:
             examples.append(example)
             example = await self.async_io.input('Example')
-        flashcard.examples = ';'.join(examples)
+        flashcard.set_examples(examples)
 
         duplicates = self.db_session.get_flashcard_duplicates(flashcard)
         await self.show_duplicates(duplicates)
 
-        flashcard.due = datetime_utc_now() + timedelta(days=2**flashcard.box)
+        if flashcard.side_answer:
+            scheduler = FlashcardScheduler(
+                flashcard_answer_side=flashcard.side_answer
+            )
+            scheduler.to_init()
+            flashcard.state = scheduler.next_state
+            flashcard.review_timestamp = scheduler.next_review_timestamp
 
         await self.async_io.print_formatted_output(output=[
             TermColor.bold('Adding flashcard'),
-            f'{TermColor.light_blue("Side A:")} {flashcard.side_a}',
-            f'{TermColor.light_blue("Side B:")} {flashcard.side_b}',
-            f'{TermColor.light_blue("Box:")} {flashcard.box}',
-            f'{TermColor.light_blue("Due:")} {flashcard.due}',
+            f'{TermColor.light_blue("Question:")} {flashcard.side_question}',
+            f'{TermColor.light_blue("Answer:")} {flashcard.side_answer}',
+            f'{TermColor.light_blue("Review date:")} '
+            f'{convert_datetime_to_local(flashcard.review_timestamp)}',
             f'{TermColor.light_blue("Source:")} {flashcard.source}',
             f'{TermColor.light_blue("Phonetic transcriptions:")} '
             f'{flashcard.phonetic_transcriptions}',
@@ -93,25 +100,29 @@ class AddFlashcard:
         )
 
         if action == 'y':
+            flashcard.created = datetime_utc_now()
             self.db_session.add_flashcard(flashcard=flashcard)
             await self.async_io.print(TermColor.bold(f'Added: {flashcard}'))
         else:
             self.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Aborting flashcard.'))
 
-    async def show_duplicates(self, duplicates):
+    async def show_duplicates(self, duplicates: List[Flashcard]):
         if duplicates:
             await self.async_io.print(
                 TermColor.bold(f'Duplicate flashcards: {len(duplicates)}')
             )
-            for duplicate in duplicates:
+            for dup in duplicates:
                 await self.async_io.print_formatted_output(output=[
-                    f'{TermColor.purple("id:")} {duplicate["id"]}',
-                    f'{TermColor.purple("Side A:")} {duplicate["side_a"]}',
-                    f'{TermColor.purple("Side B:")} {duplicate["side_b"]}',
-                    f'{TermColor.purple("Box:")} {duplicate["box"]}',
-                    f'{TermColor.purple("Due:")} {duplicate["due"]}',
-                    f'{TermColor.purple("User:")} {duplicate["user_id"]}',
-                    f'{TermColor.purple("Source:")} {duplicate["source"]}',
-                    f'{TermColor.purple("Created:")} {duplicate["created"]}'
+                    f'{TermColor.purple("Flashcard id:")} '
+                    f'{dup["flashcard_id"]}',
+                    f'{TermColor.purple("Question:")} '
+                    f'{dup["side_question"]}',
+                    f'{TermColor.purple("Answer:")} '
+                    f'{dup["side_answer"]}',
+                    f'{TermColor.purple("Review date:")} '
+                    f'{convert_datetime_to_local(dup["review_timestamp"])}',
+                    f'{TermColor.purple("Source:")} {dup["source"]}',
+                    f'{TermColor.purple("Created:")} '
+                    f'{convert_datetime_to_local(dup["created"])}'
                 ])

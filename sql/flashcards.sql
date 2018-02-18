@@ -2,17 +2,15 @@
 
 CREATE TABLE IF NOT EXISTS flashcards(
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    user_id INTEGER NOT NULL,
-    side_a CHARACTER VARYING(2048) NOT NULL,
-    side_b CHARACTER VARYING(2048) NOT NULL,
+    side_question TEXT NOT NULL,
+    side_answer TEXT NOT NULL,
     phonetic_transcriptions TEXT,
+    source TEXT,
     explanation TEXT,
     examples TEXT,
-    source CHARACTER VARYING(2048),
-    box INTEGER NOT NULL,
-    due TIMESTAMP NOT NULL,
+    user_id INTEGER NOT NULL,
+    review_timestamp TIMESTAMP NOT NULL,
+    state CHARACTER VARYING(2048) NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    retention_origin_date TIMESTAMP NOT NULL,
-    retention_current_date TIMESTAMP NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(id)
 );

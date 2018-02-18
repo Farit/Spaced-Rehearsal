@@ -2,7 +2,6 @@
 
 import signal
 import asyncio
-import functools
 
 
 from src.config import ConfigAdapter
@@ -126,7 +125,7 @@ class SpacedRehearsal:
             )
             ready_number = self.db_session.count_flashcards(
                 user_id=self.user["id"],
-                due=datetime_utc_now()
+                review_timestamp=datetime_utc_now()
             )
             action = await self.async_io.input_action(
                 action_answers=('a', 'p', 'q'),
