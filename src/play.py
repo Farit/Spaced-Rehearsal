@@ -4,7 +4,7 @@ from datetime import datetime
 
 from src.db_session import DBSession
 from src.config import ConfigAdapter
-from src.utils import TermColor, normalize_value
+from src.utils import TermColor, normalize_value, convert_datetime_to_local
 from src.base import AsyncIO
 from src.flashcard import Flashcard
 from src.scheduler import FlashcardScheduler
@@ -92,7 +92,8 @@ class Play:
         output = [
             f'{TermColor.grey("Result: ")}{result}',
             f'{TermColor.grey("Answer: ")}{flashcard["side_answer"]}',
-            f'{TermColor.grey("Next review: ")}{flashcard["review_timestamp"]}',
+            f'{TermColor.grey("Next review: ")}'
+            f'{convert_datetime_to_local(flashcard["review_timestamp"])}',
         ]
 
         source = (flashcard["source"] or "").strip()
