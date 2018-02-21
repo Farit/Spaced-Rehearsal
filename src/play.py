@@ -132,12 +132,12 @@ class Play:
         if self.stats is not None:
             playing_time = end_time - self.stats['start_time']
             output.extend([
-                f'Playing time: {playing_time}',
-                f'Total: {self.stats["total"]}, '
-                f'Played: {self.stats["played"]}, ',
-                f'Right: {self.stats["right"]}, '
-                f'Wrong: {self.stats["wrong"]}, '
+                f'Playing time: {playing_time}'
             ])
+            for stat_key in ['total', 'played', 'right', 'wrong']:
+                key = f'{stat_key}:'.title().ljust(10)
+                value = str(self.stats[stat_key]).rjust(6)
+                output.append(f'{key}{value}')
 
-        output.append( f'Game is over!')
+        output.append(f'Game is over!')
         await self.async_io.print(*output)
