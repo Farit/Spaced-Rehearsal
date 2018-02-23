@@ -91,39 +91,13 @@ class Play:
     async def print_flashcard_score(self, flashcard, result):
         output = [
             f'{TermColor.grey("Result: ")}{result}',
-            f'{TermColor.grey("Answer: ")}{flashcard["side_answer"]}',
-            f'{TermColor.grey("Next review: ")}'
-            f'{convert_datetime_to_local(flashcard["review_timestamp"])}',
         ]
-
-        source = (flashcard["source"] or "").strip()
-        if source:
-            output.append(
-                f'{TermColor.grey("Source: ")}{source}'
+        output.extend(
+            flashcard.pformat(
+                term_color=TermColor.grey,
+                exclude_fields=['side_question']
             )
-
-        phonetic_trans = (flashcard["phonetic_transcriptions"] or "").strip()
-        if phonetic_trans:
-            output.append(
-                f'{TermColor.grey("Phonetic transcriptions: ")}{phonetic_trans}'
-            )
-
-        explanation = (flashcard["explanation"] or "").strip()
-        if explanation:
-            output.append(
-                f'{TermColor.grey("Explanation: ")}{explanation}'
-            )
-
-        examples = flashcard.get_examples()
-        if examples:
-            output.append(f'{TermColor.grey("Examples: ")}')
-            examples.sort(reverse=True)
-            for ind, example in enumerate(examples, start=1):
-                example = example.strip()
-                if example:
-                    formatted_example = f'{ind}: {example}'
-                    output.append(textwrap.indent(formatted_example, ' '*4))
-
+        )
         await self.async_io.print_formatted_output(output)
 
     async def print_game_score(self):

@@ -1,9 +1,10 @@
+import textwrap
 import re
 
 from datetime import datetime, timedelta
 from typing import Optional, List
 
-from src.utils import normalize_value, datetime_utc_now
+from src.utils import normalize_value, convert_datetime_to_local
 from src.scheduler import FlashcardState
 
 
@@ -154,6 +155,65 @@ class Flashcard(metaclass=FlashcardMetaclass):
 
         else:
             raise TypeError(f'Value {state!r} must be state or str')
+
+    def pformat(self, term_color, exclude_fields=None):
+        """
+        :param term_color: TermColor colour, e.g TermColor.grey or
+        TermColor.purple
+        :param exclude_fields: Which flashcard's fields must be excluded.
+        """
+        exclude_fields = exclude_fields or []
+        output = []
+
+        if 'side_question' not in exclude_fields:
+            output.append(
+                f'{term_color("Question: ")}{self.side_question}'
+            )
+
+        if 'side_answer' not in exclude_fields:
+            output.append(
+                f'{term_color("Answer: ")}{self.side_answer}'
+            )
+
+        if 'review_timestamp' not in exclude_fields:
+            output.append(
+                f'{term_color("Review date: ")}'
+                f'{convert_datetime_to_local(self.review_timestamp)}',
+            )
+
+        if 'source' not in exclude_fields:
+            source = (self.source or "").strip()
+            if source:
+                output.append(
+                    f'{term_color("Source: ")}{source}'
+                )
+
+        if 'phonetic_transcriptions' not in exclude_fields:
+            phonetic_trans = (self.phonetic_transcriptions or "").strip()
+            if phonetic_trans:
+                output.append(
+                    f'{term_color("Phonetic transcriptions: ")}{phonetic_trans}'
+                )
+
+        if 'explanation' not in exclude_fields:
+            explanation = (self.explanation or "").strip()
+            if explanation:
+                output.append(
+                    f'{term_color("Explanation: ")}{explanation}'
+                )
+
+        if 'examples' not in exclude_fields:
+            examples = self.get_examples()
+            if examples:
+                output.append(f'{term_color("Examples: ")}')
+                examples.sort(reverse=True)
+                for ind, example in enumerate(examples, start=1):
+                    example = example.strip()
+                    if example:
+                        formatted_example = f'{ind}: {example}'
+                        output.append(textwrap.indent(formatted_example, ' '*4))
+
+        return output
 
     def __str__(self):
         return f'[{self.side_question}] / [{self.side_answer}]'

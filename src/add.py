@@ -70,19 +70,15 @@ class AddFlashcard:
             flashcard.state = scheduler.next_state
             flashcard.review_timestamp = scheduler.next_review_timestamp
 
-        await self.async_io.print_formatted_output(output=[
-            TermColor.bold('Adding flashcard'),
-            f'{TermColor.light_blue("Question:")} {flashcard.side_question}',
-            f'{TermColor.light_blue("Answer:")} {flashcard.side_answer}',
-            f'{TermColor.light_blue("Review date:")} '
-            f'{convert_datetime_to_local(flashcard.review_timestamp)}',
-            f'{TermColor.light_blue("Source:")} {flashcard.source}',
-            f'{TermColor.light_blue("Phonetic transcriptions:")} '
-            f'{flashcard.phonetic_transcriptions}',
-            f'{TermColor.light_blue("Explanation:")} '
-            f'{flashcard.explanation}',
-            f'{TermColor.light_blue("Examples:")} {flashcard.examples}',
-        ])
+        output = [
+            TermColor.bold('Adding flashcard')
+        ]
+        output.extend(
+            flashcard.pformat(
+                term_color=TermColor.light_blue
+            )
+        )
+        await self.async_io.print_formatted_output(output)
 
         action_msgs = []
         if duplicates:
