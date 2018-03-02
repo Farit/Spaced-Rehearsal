@@ -45,6 +45,7 @@ class DBSession:
             self.setup_flashcard_states_table()
             self.setup_trigger_log_update_flashcard_state()
             self.setup_trigger_log_insert_flashcard_state()
+            self.setup_full_text_search()
 
     def __str__(self):
         return '<{0}[conn:{1}]>'.format(
@@ -132,6 +133,19 @@ class DBSession:
             self.db_cursor.execute(trigger_log_insert_flashcard_state)
             self.db_conn.commit()
 
+    def setup_full_text_search(self):
+        self.db_cursor.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='fts_flashcards';
+        """)
+        fts_flashcards_virtual_table = self.db_cursor.fetchone()
+        if fts_flashcards_virtual_table is None:
+            with open('sql/fts_flashcards.sql') as fh:
+                fts_flashcards_virtual_table = fh.read()
+            self.db_cursor.executescript(fts_flashcards_virtual_table)
+            self.db_conn.commit()
+
     def get_user(self, login_name):
         self.db_cursor.execute(
             'select * from users where login=?', (login_name,)
@@ -216,16 +230,44 @@ class DBSession:
             )
 
     def get_flashcard_duplicates(self, flashcard: Flashcard) -> List[Flashcard]:
-        query = self.db_cursor.execute(
-            'select '
-            'id as flashcard_id, user_id, side_question, side_answer, '
-            'review_timestamp, source, explanation, examples, '
-            'phonetic_transcriptions, created, state '
-            'from flashcards '
-            'where (side_question = ? or side_answer = ?) and user_id = ?',
-            (flashcard.side_question, flashcard.side_answer, flashcard.user_id)
-        )
-        duplicates = [Flashcard(**row) for row in query]
+        duplicates = []
+        if flashcard.side_answer or flashcard.side_question:
+
+            if flashcard.side_answer and flashcard.side_question:
+                needle = (
+                    f"'{flashcard.side_answer} OR {flashcard.side_question}'"
+                )
+            elif flashcard.side_question:
+                needle = f"'{flashcard.side_question}'"
+            else:
+                needle = f"'{flashcard.side_answer}'"
+
+            query = self.db_cursor.execute(
+                "select docid "
+                "from fts_flashcards "
+                "where fts_flashcards match ?",
+                (needle, )
+            )
+            duplicate_ids = tuple(row['docid'] for row in query)
+
+            if duplicate_ids:
+                if len(duplicate_ids) == 1:
+                    duplicate_ids = f'({duplicate_ids[0]})'
+                else:
+                    duplicate_ids = str(duplicate_ids)
+
+                query = (
+                    f'select '
+                    f'id as flashcard_id, user_id, side_question, side_answer, '
+                    f'review_timestamp, source, explanation, examples, '
+                    f'phonetic_transcriptions, created, state '
+                    f'from flashcards '
+                    f'where id in {duplicate_ids} and '
+                    f'user_id = {flashcard.user_id}'
+                )
+                query = self.db_cursor.execute(query)
+                duplicates = [Flashcard(**row) for row in query]
+
         return duplicates
 
     def get_vis_by_date(self, user_id):

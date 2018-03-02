@@ -83,7 +83,7 @@ class AddFlashcard:
         action_msgs = []
         if duplicates:
             action_msgs.append(
-                f'{TermColor.purple(f"Duplicates: {len(duplicates)}")}'
+                f'{TermColor.purple(f"Possible duplicates: {len(duplicates)}")}'
             )
 
         action_msgs.extend([
@@ -106,7 +106,9 @@ class AddFlashcard:
     async def show_duplicates(self, duplicates: List[Flashcard]):
         if duplicates:
             await self.async_io.print(
-                TermColor.bold(f'Duplicate flashcards: {len(duplicates)}')
+                TermColor.bold(
+                    f'Possible duplicate flashcards: {len(duplicates)}'
+                )
             )
             for dup in duplicates:
                 await self.async_io.print_formatted_output(output=[
