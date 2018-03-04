@@ -10,7 +10,7 @@ class TermColorMetaClass(type):
 
     def __getattr__(cls, item):
         colours = [
-            'red', 'yellow', 'green', 'grey', 'purple', 'light_blue',
+            'red', 'yellow', 'blue', 'green', 'grey', 'purple', 'light_blue',
             'bold', 'underline'
         ]
         if item in colours:

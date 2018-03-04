@@ -127,13 +127,16 @@ class SpacedRehearsal:
                 user_id=self.user["id"],
                 review_timestamp=datetime_now()
             )
+            await self.async_io.print(
+                f'Number of the flashcards: '
+                f'{TermColor.bold(str(total_number))}',
+                f'Number of the flashcards ready to play: '
+                f'{TermColor.bold(str(ready_number))}'
+            )
+
             action = await self.async_io.input_action(
                 action_answers=('a', 'p', 'q'),
                 action_msgs=[
-                    f'Number of the flashcards: '
-                    f'{TermColor.bold(str(total_number))}',
-                    f'Number of the flashcards ready to play: '
-                    f'{TermColor.bold(str(ready_number))}',
                     f'If you want to {TermColor.yellow("add")} a new flashcard,'
                     f' please enter {TermColor.yellow("a")}.',
                     f'If you want to {TermColor.green("play")},'
