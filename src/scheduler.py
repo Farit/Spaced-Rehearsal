@@ -2,7 +2,7 @@ import math
 
 from datetime import datetime, timedelta
 
-from src.utils import datetime_now, convert_datetime_to_local, datetime_utc_now
+from src.utils import datetime_now
 
 
 class FlashcardState:
@@ -44,7 +44,7 @@ class FlashcardScheduler:
             delay=24,
             mem_strength=None
         )
-        self.next_review_timestamp = datetime_utc_now() + timedelta(
+        self.next_review_timestamp = datetime_now() + timedelta(
             hours=self.next_state.delay
         )
 
@@ -56,15 +56,12 @@ class FlashcardScheduler:
             raise Exception(f'Flashcard current review timestamp must be set.')
 
         now = datetime_now()
-        current_review_timestamp = convert_datetime_to_local(
-            self.current_review_timestamp
-        )
 
-        if now > current_review_timestamp:
-            diff_timedelta = now - current_review_timestamp
+        if now > self.current_review_timestamp:
+            diff_timedelta = now - self.current_review_timestamp
             hours = int(diff_timedelta.total_seconds() / 3600)
         else:
-            diff_timedelta = current_review_timestamp - now
+            diff_timedelta = self.current_review_timestamp - now
             hours = -int(diff_timedelta.total_seconds() / 3600)
 
         current_delay = hours + self.current_state.delay
@@ -92,7 +89,7 @@ class FlashcardScheduler:
             delay=next_delay,
             mem_strength=mem_strength
         )
-        self.next_review_timestamp = datetime_utc_now() + timedelta(
+        self.next_review_timestamp = datetime_now() + timedelta(
             hours=self.next_state.delay
         )
 
@@ -103,7 +100,7 @@ class FlashcardScheduler:
             delay=24,
             mem_strength=None
         )
-        self.next_review_timestamp = datetime_utc_now() + timedelta(
+        self.next_review_timestamp = datetime_now() + timedelta(
             hours=self.next_state.delay
         )
 

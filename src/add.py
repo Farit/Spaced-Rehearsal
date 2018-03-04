@@ -4,7 +4,7 @@ from typing import List
 from src.db_session import DBSession
 from src.flashcard import Flashcard
 from src.config import ConfigAdapter
-from src.utils import TermColor, datetime_utc_now, convert_datetime_to_local
+from src.utils import TermColor, datetime_now
 from src.base import AsyncIO
 from src.scheduler import FlashcardScheduler
 
@@ -96,7 +96,7 @@ class AddFlashcard:
         )
 
         if action == 'y':
-            flashcard.created = datetime_utc_now()
+            flashcard.created = datetime_now()
             self.db_session.add_flashcard(flashcard=flashcard)
             await self.async_io.print(TermColor.bold(f'Added: {flashcard}'))
         else:
@@ -119,8 +119,8 @@ class AddFlashcard:
                     f'{TermColor.purple("Answer:")} '
                     f'{dup["side_answer"]}',
                     f'{TermColor.purple("Review date:")} '
-                    f'{convert_datetime_to_local(dup["review_timestamp"])}',
+                    f'{dup["review_timestamp"]}',
                     f'{TermColor.purple("Source:")} {dup["source"]}',
                     f'{TermColor.purple("Created:")} '
-                    f'{convert_datetime_to_local(dup["created"])}'
+                    f'{dup["created"]}'
                 ])

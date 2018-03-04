@@ -1,10 +1,10 @@
 import textwrap
 import re
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, List
 
-from src.utils import normalize_value, convert_datetime_to_local
+from src.utils import normalize_value
 from src.scheduler import FlashcardState
 
 
@@ -178,7 +178,7 @@ class Flashcard(metaclass=FlashcardMetaclass):
         if 'review_timestamp' not in exclude_fields:
             output.append(
                 f'{term_color("Review date: ")}'
-                f'{convert_datetime_to_local(self.review_timestamp)}',
+                f'{self.review_timestamp}',
             )
 
         if 'source' not in exclude_fields:

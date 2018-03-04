@@ -1,10 +1,8 @@
-import textwrap
-
 from datetime import datetime
 
 from src.db_session import DBSession
 from src.config import ConfigAdapter
-from src.utils import TermColor, normalize_value, convert_datetime_to_local
+from src.utils import TermColor, normalize_value
 from src.base import AsyncIO
 from src.flashcard import Flashcard
 from src.scheduler import FlashcardScheduler

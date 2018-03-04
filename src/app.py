@@ -8,7 +8,7 @@ from src.config import ConfigAdapter
 from src.db_session import DBSession
 from src.add import AddFlashcard
 from src.play import Play
-from src.utils import TermColor, datetime_utc_now
+from src.utils import TermColor, datetime_now
 from src.base import AsyncIO
 from web_server.web_server import WebServer
 
@@ -125,7 +125,7 @@ class SpacedRehearsal:
             )
             ready_number = self.db_session.count_flashcards(
                 user_id=self.user["id"],
-                review_timestamp=datetime_utc_now()
+                review_timestamp=datetime_now()
             )
             action = await self.async_io.input_action(
                 action_answers=('a', 'p', 'q'),

@@ -8,7 +8,10 @@ from typing import List
 
 from src.flashcard import Flashcard
 from src.scheduler import FlashcardState
-from src.utils import datetime_utc_now
+from src.utils import (
+    datetime_now, datetime_change_timezone,
+    convert_datetime_to_local
+)
 
 
 class DBSession:
@@ -161,6 +164,11 @@ class DBSession:
             )
 
     def count_flashcards(self, user_id, review_timestamp=None) -> int:
+        """
+        :param user_id: User identifier
+        :param review_timestamp: Timestamp with a localtime zone.
+        :return: Number of flashcards.
+        """
         assert isinstance(review_timestamp, (datetime, type(None)))
         if review_timestamp is None:
             query = self.db_cursor.execute(
@@ -173,7 +181,8 @@ class DBSession:
             query = self.db_cursor.execute(
                 'SELECT count(*) '
                 'FROM flashcards '
-                'WHERE user_id = ? AND review_timestamp <= ?',
+                'WHERE user_id = ? AND '
+                'datetime(review_timestamp, "localtime") <= ?',
                 (user_id, review_timestamp)
             )
         return query.fetchone()['count(*)']
@@ -185,11 +194,21 @@ class DBSession:
             'review_timestamp, source, explanation, examples, '
             'phonetic_transcriptions, created, state '
             'FROM flashcards '
-            'WHERE user_id = ? AND review_timestamp <= ? '
-            'ORDER BY review_timestamp',
-            (user_id, datetime_utc_now())
+            'WHERE user_id = ? AND '
+            'datetime(review_timestamp, "localtime") <= ? '
+            'ORDER BY datetime(review_timestamp, "localtime")',
+            (user_id, datetime_now())
         )
-        flashcards = [Flashcard(**row) for row in query]
+        flashcards = []
+        for row in query:
+            flashcard = dict(row)
+            flashcard['review_timestamp'] = convert_datetime_to_local(
+                row['review_timestamp']
+            )
+            flashcard['created'] = convert_datetime_to_local(
+                row['created']
+            )
+            flashcards.append(Flashcard(**flashcard))
 
         shuffled_flashcards = []
         group_by_date = groupby(
@@ -205,6 +224,16 @@ class DBSession:
 
     def add_flashcard(self, flashcard: Flashcard) -> None:
         with self.db_conn:
+            data = dict(flashcard)
+
+            # Convert timestamps to UTC.
+            data['review_timestamp'] = datetime_change_timezone(
+                data['review_timestamp'], offset=0
+            )
+            data['created'] = datetime_change_timezone(
+                data['created'], offset=0
+            )
+
             self.db_cursor.execute(
                 'INSERT INTO flashcards'
                 '(user_id, side_question, side_answer, review_timestamp,'
@@ -213,7 +242,7 @@ class DBSession:
                 'VALUES (:user_id, :side_question, :side_answer, '
                 ':review_timestamp, :source, :explanation, :examples, '
                 ':phonetic_transcriptions, :created, :state) ',
-                dict(flashcard)
+                data
             )
 
     def update_flashcard_state(self, flashcard: Flashcard) -> None:
@@ -224,7 +253,9 @@ class DBSession:
                 'WHERE id=:flashcard_id',
                 {
                     'flashcard_id': flashcard.flashcard_id,
-                    'review_timestamp': flashcard.review_timestamp,
+                    'review_timestamp': datetime_change_timezone(
+                        flashcard.review_timestamp, offset=0
+                    ),
                     'state': flashcard.state
                 }
             )
@@ -266,23 +297,31 @@ class DBSession:
                     f'user_id = {flashcard.user_id}'
                 )
                 query = self.db_cursor.execute(query)
-                duplicates = [Flashcard(**row) for row in query]
+                for row in query:
+                    flashcard = dict(row)
+                    flashcard['review_timestamp'] = convert_datetime_to_local(
+                        row['review_timestamp']
+                    )
+                    flashcard['created'] = convert_datetime_to_local(
+                        row['created']
+                    )
+                    duplicates.append(Flashcard(**flashcard))
 
         return duplicates
 
     def get_vis_by_date(self, user_id):
         query = self.db_cursor.execute(
-            'SELECT strftime("%Y-%m-%d", review_timestamp) as key, '
-            'count(*) as value '
+            'SELECT strftime("%Y-%m-%d", review_timestamp, "localtime") as key,'
+            ' count(*) as value '
             'FROM flashcards '
             'WHERE user_id = ? '
-            'GROUP BY strftime("%Y-%m-%d", review_timestamp) '
-            'ORDER BY strftime("%Y-%m-%d", review_timestamp);',
+            'GROUP BY strftime("%Y-%m-%d", review_timestamp, "localtime") '
+            'ORDER BY strftime("%Y-%m-%d", review_timestamp, "localtime");',
             (user_id, )
         )
         data = []
         dates = []
-        now = datetime_utc_now().strftime("%Y-%m-%d")
+        now = datetime_now().strftime("%Y-%m-%d")
         has_now_as_date = False
         for row in query:
             datum = {key: row[key] for key in row.keys()}
