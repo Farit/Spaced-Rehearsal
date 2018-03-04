@@ -70,6 +70,8 @@ class AddFlashcard:
             flashcard.state = scheduler.next_state
             flashcard.review_timestamp = scheduler.next_review_timestamp
 
+        flashcard.created = datetime_now()
+
         output = [
             TermColor.bold('Adding flashcard')
         ]
@@ -96,7 +98,6 @@ class AddFlashcard:
         )
 
         if action == 'y':
-            flashcard.created = datetime_now()
             self.db_session.add_flashcard(flashcard=flashcard)
             await self.async_io.print(TermColor.bold(f'Added: {flashcard}'))
         else:
@@ -111,16 +112,13 @@ class AddFlashcard:
                 )
             )
             for dup in duplicates:
-                await self.async_io.print_formatted_output(output=[
+                output = [
                     f'{TermColor.purple("Flashcard id:")} '
                     f'{dup["flashcard_id"]}',
-                    f'{TermColor.purple("Question:")} '
-                    f'{dup["side_question"]}',
-                    f'{TermColor.purple("Answer:")} '
-                    f'{dup["side_answer"]}',
-                    f'{TermColor.purple("Review date:")} '
-                    f'{dup["review_timestamp"]}',
-                    f'{TermColor.purple("Source:")} {dup["source"]}',
-                    f'{TermColor.purple("Created:")} '
-                    f'{dup["created"]}'
-                ])
+                ]
+                output.extend(
+                    dup.pformat(
+                        term_color=TermColor.purple
+                    )
+                )
+                await self.async_io.print_formatted_output(output)

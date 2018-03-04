@@ -213,6 +213,12 @@ class Flashcard(metaclass=FlashcardMetaclass):
                         formatted_example = f'{ind}: {example}'
                         output.append(textwrap.indent(formatted_example, ' '*4))
 
+        if 'created' not in exclude_fields:
+            output.append(
+                f'{term_color("Created date: ")}'
+                f'{self.created}',
+            )
+
         return output
 
     def __str__(self):
