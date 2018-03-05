@@ -256,6 +256,15 @@ class DBSession:
                 dict(flashcard)
             )
 
+    def delete_flashcard(self, flashcard: Flashcard) -> None:
+        with self.db_conn:
+            self.db_cursor.executescript(f"""
+                DELETE FROM flashcard_states 
+                WHERE flashcard_id={flashcard.flashcard_id};
+                DELETE FROM flashcards
+                WHERE id={flashcard.flashcard_id};
+            """)
+
     def update_flashcard_state(self, flashcard: Flashcard) -> None:
         with self.db_conn:
             self.db_cursor.execute(

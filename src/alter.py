@@ -18,7 +18,7 @@ class AlterFlashcard:
 
     async def alter(self):
         await self.async_io.print(
-            f'Alter Flashcard',
+            TermColor.bold('Alter Flashcard'),
             f'Pressing {TermColor.red("Ctrl+D")} terminates altering.'
         )
 
@@ -30,7 +30,8 @@ class AlterFlashcard:
             }
 
             action_msgs =[
-                f'Please, enter flashcard id you want to alter.',
+                f'Please, enter flashcard {TermColor.bold("id")} '
+                f'you want to {TermColor.underline("alter")}.',
                 f'If you want to exit, please enter {TermColor.red("q")}'
             ]
             action = await self.async_io.input_action(
