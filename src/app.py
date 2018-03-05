@@ -6,8 +6,9 @@ import asyncio
 
 from src.config import ConfigAdapter
 from src.db_session import DBSession
-from src.add import AddFlashcard
+from src.create import CreateFlashcard
 from src.play import Play
+from src.alter import AlterFlashcard
 from src.utils import TermColor, datetime_now
 from src.base import AsyncIO
 from web_server.web_server import WebServer
@@ -17,8 +18,9 @@ class SpacedRehearsal:
 
     def __init__(self):
         self.user = None
-        self.add_flashcard: AddFlashcard = None
+        self.create_flashcard: CreateFlashcard = None
         self.play_flashcards: Play = None
+        self.alter_flashcard: AlterFlashcard = None
         self.loop = asyncio.get_event_loop()
         self.async_io = AsyncIO(loop=self.loop)
         self.config = ConfigAdapter(filename='config.cfg')
@@ -101,10 +103,13 @@ class SpacedRehearsal:
             else:
                 self.user = self.db_session.get_user(login_name)
                 WebServer.set_user_id(user_id=self.user['id'])
-                self.add_flashcard = AddFlashcard(
+                self.create_flashcard = CreateFlashcard(
                     user_id=self.user['id'], async_io=self.async_io
                 )
                 self.play_flashcards = Play(
+                    user_id=self.user['id'], async_io=self.async_io
+                )
+                self.alter_flashcard = AlterFlashcard(
                     user_id=self.user['id'], async_io=self.async_io
                 )
                 asyncio.ensure_future(self.choose_action(), loop=self.loop)
@@ -135,20 +140,24 @@ class SpacedRehearsal:
             )
 
             action = await self.async_io.input_action(
-                action_answers=('a', 'p', 'q'),
+                action_answers=('c', 'p', 'a', 'q'),
                 action_msgs=[
-                    f'If you want to {TermColor.yellow("add")} a new flashcard,'
-                    f' please enter {TermColor.yellow("a")}.',
+                    f'If you want to {TermColor.yellow("create")} a new '
+                    f'flashcard, please enter {TermColor.yellow("c")}.',
                     f'If you want to {TermColor.green("play")},'
                     f' please enter {TermColor.green("p")}.',
+                    f'If you want to {TermColor.light_blue("alter")} '
+                    f'a flashcard, please enter {TermColor.light_blue("a")}.',
                     f'If you want to {TermColor.red("quit")}, please enter '
                     f'{TermColor.red("q")}.'
                 ]
             )
-            if action == 'a':
-                asyncio.ensure_future(self.add(), loop=self.loop)
+            if action == 'c':
+                asyncio.ensure_future(self.create(), loop=self.loop)
             elif action == 'p':
                 asyncio.ensure_future(self.play(), loop=self.loop)
+            elif action == 'a':
+                asyncio.ensure_future(self.alter(), loop=self.loop)
             else:
                 asyncio.ensure_future(self.exit(), loop=self.loop)
 
@@ -168,15 +177,28 @@ class SpacedRehearsal:
         finally:
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
 
-    async def add(self):
+    async def create(self):
         try:
-            await self.add_flashcard.add()
+            await self.create_flashcard.add()
         except EOFError:
-            self.add_flashcard.popleft_previous_sources()
+            self.create_flashcard.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Termination!'))
 
         except Exception as err:
-            self.add_flashcard.popleft_previous_sources()
+            self.create_flashcard.popleft_previous_sources()
+            await self.async_io.print(TermColor.red('Error!'))
+            raise err
+
+        finally:
+            asyncio.ensure_future(self.choose_action(), loop=self.loop)
+
+    async def alter(self):
+        try:
+            await self.alter_flashcard.alter()
+        except EOFError:
+            await self.async_io.print(TermColor.red('Termination!'))
+
+        except Exception as err:
             await self.async_io.print(TermColor.red('Error!'))
             raise err
 

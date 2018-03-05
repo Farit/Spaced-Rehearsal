@@ -245,6 +245,17 @@ class DBSession:
                 data
             )
 
+    def update_flashcard(self, flashcard: Flashcard) -> None:
+        with self.db_conn:
+            self.db_cursor.execute(
+                'UPDATE flashcards '
+                'SET side_question=:side_question, side_answer=:side_answer, '
+                'source=:source, explanation=:explanation, examples=:examples, '
+                'phonetic_transcriptions=:phonetic_transcriptions '
+                'WHERE id=:flashcard_id',
+                dict(flashcard)
+            )
+
     def update_flashcard_state(self, flashcard: Flashcard) -> None:
         with self.db_conn:
             self.db_cursor.execute(
@@ -260,32 +271,24 @@ class DBSession:
                 }
             )
 
-    def get_flashcard_duplicates(self, flashcard: Flashcard) -> List[Flashcard]:
-        duplicates = []
-        if flashcard.side_answer or flashcard.side_question:
-
-            if flashcard.side_answer and flashcard.side_question:
-                needle = (
-                    f"'{flashcard.side_answer} OR {flashcard.side_question}'"
-                )
-            elif flashcard.side_question:
-                needle = f"'{flashcard.side_question}'"
-            else:
-                needle = f"'{flashcard.side_answer}'"
-
+    def search(self, *search_queries, user_id) -> List[Flashcard]:
+        flashcards = []
+        search_queries = [s.strip() for s in search_queries if s.strip()]
+        if search_queries:
+            needle = ' OR '.join(str(q) for q in search_queries)
             query = self.db_cursor.execute(
                 "select docid "
                 "from fts_flashcards "
                 "where fts_flashcards match ?",
                 (needle, )
             )
-            duplicate_ids = tuple(row['docid'] for row in query)
+            flashcard_ids = tuple(row['docid'] for row in query)
 
-            if duplicate_ids:
-                if len(duplicate_ids) == 1:
-                    duplicate_ids = f'({duplicate_ids[0]})'
+            if flashcard_ids:
+                if len(flashcard_ids) == 1:
+                    flashcard_ids = f'({flashcard_ids[0]})'
                 else:
-                    duplicate_ids = str(duplicate_ids)
+                    flashcard_ids = str(flashcard_ids)
 
                 query = (
                     f'select '
@@ -293,8 +296,8 @@ class DBSession:
                     f'review_timestamp, source, explanation, examples, '
                     f'phonetic_transcriptions, created, state '
                     f'from flashcards '
-                    f'where id in {duplicate_ids} and '
-                    f'user_id = {flashcard.user_id}'
+                    f'where id in {flashcard_ids} and '
+                    f'user_id = {user_id}'
                 )
                 query = self.db_cursor.execute(query)
                 for row in query:
@@ -305,9 +308,9 @@ class DBSession:
                     flashcard['created'] = convert_datetime_to_local(
                         row['created']
                     )
-                    duplicates.append(Flashcard(**flashcard))
+                    flashcards.append(Flashcard(**flashcard))
 
-        return duplicates
+        return flashcards
 
     def get_vis_by_date(self, user_id):
         query = self.db_cursor.execute(

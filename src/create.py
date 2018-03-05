@@ -9,7 +9,7 @@ from src.base import AsyncIO
 from src.scheduler import FlashcardScheduler
 
 
-class AddFlashcard:
+class CreateFlashcard:
 
     def __init__(self, user_id, async_io: AsyncIO):
         self.user_id = user_id
@@ -59,7 +59,11 @@ class AddFlashcard:
             example = await self.async_io.input('Example')
         flashcard.set_examples(examples)
 
-        duplicates = self.db_session.get_flashcard_duplicates(flashcard)
+        duplicates = self.db_session.search(
+            flashcard.side_answer,
+            flashcard.side_question,
+            user_id=flashcard.user_id
+        )
         await self.show_duplicates(duplicates)
 
         if flashcard.side_answer:
