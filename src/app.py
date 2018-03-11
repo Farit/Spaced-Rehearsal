@@ -191,15 +191,14 @@ class SpacedRehearsal:
         try:
             await self.create_flashcard.add()
         except EOFError:
-            self.create_flashcard.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Termination!'))
 
         except Exception as err:
-            self.create_flashcard.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Error!'))
             raise err
 
         finally:
+            self.create_flashcard.popleft_previous_sources()
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
 
     async def alter(self):
@@ -213,6 +212,7 @@ class SpacedRehearsal:
             raise err
 
         finally:
+            await self.create_flashcard.update_source_tags()
             asyncio.ensure_future(self.choose_action(), loop=self.loop)
 
     async def delete(self):
@@ -226,4 +226,5 @@ class SpacedRehearsal:
             raise err
 
         finally:
+            await self.create_flashcard.update_source_tags()
             asyncio.ensure_future(self.choose_action(), loop=self.loop)

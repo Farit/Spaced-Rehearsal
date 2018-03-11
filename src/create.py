@@ -4,7 +4,7 @@ from typing import List
 from src.db_session import DBSession
 from src.flashcard import Flashcard
 from src.config import ConfigAdapter
-from src.utils import TermColor, datetime_now
+from src.utils import TermColor, datetime_now, normalize_value
 from src.base import AsyncIO
 from src.scheduler import FlashcardScheduler
 
@@ -17,6 +17,24 @@ class CreateFlashcard:
         self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(self.config['database'].get('name'))
         self.async_io = async_io
+        self.source_tags = self.get_source_tags()
+
+    def get_source_tags(self):
+        tags = self.db_session.get_flashcard_source_tags(self.user_id)
+        source_tags = {
+            normalize_value(tag.strip(), remove_trailing='.').capitalize() + '.'
+            for tag in tags if tag and tag.strip()
+        }
+        return source_tags
+
+    async def update_source_tags(self, tag=None):
+        if tag is not None:
+            self.source_tags.add(
+                normalize_value(tag.strip(), remove_trailing='.').capitalize() 
+                + '.'
+            )
+        else:
+            self.source_tags = self.get_source_tags()
 
     def popleft_previous_sources(self):
         if self.previous_sources:
@@ -34,9 +52,11 @@ class CreateFlashcard:
 
         source = await self.async_io.input(
             'Source',
-            pre_fill=self.previous_sources[0] if self.previous_sources else ''
+            pre_fill=self.previous_sources[0] if self.previous_sources else '',
+            history=self.source_tags
         )
         self.previous_sources.appendleft(source)
+        await self.update_source_tags(source)
         flashcard.source = source
 
         flashcard.phonetic_transcriptions = await self.async_io.input(

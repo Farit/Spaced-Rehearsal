@@ -103,7 +103,7 @@ def convert_datetime_to_local(datetime_obj: datetime):
 
 def normalize_value(value, *, remove_trailing=None, to_lower=False):
     _normalized = ''
-    for word in value.split(' '):
+    for word in (value or '').split(' '):
         word = word.strip()
         if word:
             prefix = f' ' if word not in string.punctuation else f''

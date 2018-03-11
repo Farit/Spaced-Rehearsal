@@ -284,7 +284,7 @@ class DBSession:
         flashcards = []
         search_queries = [s.strip() for s in search_queries if s.strip()]
         if search_queries:
-            needle = ' OR '.join(str(q) for q in search_queries)
+            needle = ' OR '.join(str(q) + '*' for q in search_queries)
             query = self.db_cursor.execute(
                 "select docid "
                 "from fts_flashcards "
@@ -352,3 +352,13 @@ class DBSession:
                     {'key': now, 'value': 0}
                 )
         return data
+
+    def get_flashcard_source_tags(self, user_id):
+        query = self.db_cursor.execute(
+            'SELECT distinct(source) as tag '
+            'FROM flashcards '
+            'WHERE user_id = :user_id '
+            'ORDER BY id desc;',
+            {'user_id': user_id}
+        )
+        return [row['tag'] for row in query]

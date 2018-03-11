@@ -21,8 +21,16 @@ class AsyncIO:
         self.loop.remove_writer(sys.stdout)
 
     @staticmethod
-    def blocking_input(prompt, pre_fill=''):
-        readline.set_startup_hook(lambda: readline.insert_text(pre_fill))
+    def blocking_input(prompt, pre_fill='', history=None):
+        def startup_hook():
+            readline.insert_text(pre_fill)
+
+            if history is not None:
+                readline.clear_history()
+            for line in history or []:
+                readline.add_history(line)
+
+        readline.set_startup_hook(startup_hook)
         try:
             return input(prompt)
         finally:
@@ -36,10 +44,10 @@ class AsyncIO:
         )
         await asyncio.sleep(self.wait_timeout)
 
-    async def input(self, msg, pre_fill=''):
+    async def input(self, msg, pre_fill='', history=None):
         message = TermColor.grey(f'[{msg}] ->: ', is_escape_seq=True)
         future = self.loop.run_in_executor(
-            None, self.blocking_input, message, pre_fill
+            None, self.blocking_input, message, pre_fill, history
         )
 
         try:
