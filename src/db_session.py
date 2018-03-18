@@ -282,7 +282,9 @@ class DBSession:
 
     def search(self, *search_queries, user_id) -> List[Flashcard]:
         flashcards = []
-        search_queries = [s.strip() for s in search_queries if s.strip()]
+        search_queries = [
+            s.strip().lower() for s in search_queries if s.strip()
+        ]
         if search_queries:
             needle = ' OR '.join(str(q) + '*' for q in search_queries)
             query = self.db_cursor.execute(
