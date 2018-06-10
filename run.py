@@ -2,6 +2,7 @@
 
 import os
 import os.path
+import logging.config
 import site
 
 
@@ -13,6 +14,10 @@ def run():
     os.chdir(project_dir)
 
     from src.app import SpacedRehearsal
+    from src.utils import log_config_as_dict
+
+    logging.config.dictConfig(log_config_as_dict)
+
     spaced_rehearsal = SpacedRehearsal()
     spaced_rehearsal.run()
 

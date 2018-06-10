@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>{% block title %}Spaced Rehearsal{% end %}</title>
+        <link rel="stylesheet" href="{{static_url('css/universe.css')}}">
+    </head>
+
+    <body>
+        <header id="site-header">
+        </header>
+
+        <main id="site-main">
+            {% block main %}
+            {% end %}
+        </main>
+
+        <script src="{{static_url('js/lib/d3.js')}}"></script>
+        <script src="{{static_url('js/lib/d3-scale.js')}}"></script>
+        <script src="{{static_url('js/lib/d3-scale-chromatic.js')}}"></script>
+        {% block scripts %}{% end %}
+    </body>
+
+</html>

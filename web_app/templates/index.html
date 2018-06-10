@@ -1,0 +1,18 @@
+{% extends base.html %}
+
+{% block title %}about{% end %}
+
+{% block main %}
+    <header class="center">
+        <div>The number of flashcards is {{num_of_flashcards}}</div>
+    </header>
+    <div id="main-container" class="center">
+        <div class="panel">
+            <div id="vis-by-date"></div>
+        </div>
+    </div>
+{% end %}
+
+{% block scripts %}
+    <script src="{{static_url('js/visualization_by_date.js')}}"></script>
+{% end %}

@@ -12,7 +12,7 @@ from src.alter import AlterFlashcard
 from src.delete import DeleteFlashcard
 from src.utils import TermColor, datetime_now
 from src.base import AsyncIO
-from web_server.web_server import WebServer
+from web_app.app import Application as WebApp
 
 
 class SpacedRehearsal:
@@ -29,19 +29,13 @@ class SpacedRehearsal:
         self.db_session = DBSession(
             self.config['database'].get('name'), setup_db=True
         )
-        self.web_server = None
+        self.web_app = WebApp()
         self.set_signal_handler('sigint')
         self.set_signal_handler('sigterm')
 
     def run(self):
         try:
-            self.web_server = self.loop.run_until_complete(
-                self.loop.create_server(
-                    WebServer,
-                    self.config['server'].get('host'),
-                    self.config['server'].getint('port')
-                )
-            )
+            self.web_app.start()
             asyncio.ensure_future(self.login(), loop=self.loop)
             self.loop.run_forever()
         finally:
@@ -65,10 +59,9 @@ class SpacedRehearsal:
 
     async def login(self):
         try:
-            address, port = self.web_server.sockets[0].getsockname()
-            WebServer.set_app()
             await self.async_io.print(
-                f'Web server is running on http://{address}:{port}'
+                f'Web server is running on '
+                f'http://{self.web_app.address}:{self.web_app.port}'
             )
             await self.async_io.print(
                 TermColor.bold(f'Please, enter a username.'),
@@ -104,7 +97,7 @@ class SpacedRehearsal:
 
             else:
                 self.user = self.db_session.get_user(login_name)
-                WebServer.set_user_id(user_id=self.user['id'])
+                self.web_app.set_user_id(user_id=self.user['id'])
                 self.create_flashcard = CreateFlashcard(
                     user_id=self.user['id'], async_io=self.async_io
                 )

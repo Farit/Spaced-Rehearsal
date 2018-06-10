@@ -121,3 +121,48 @@ def normalize_value(value, *, remove_trailing=None, to_lower=False):
 def remove_whitespaces(value):
     return re.sub(r'[\s]{2,}', r' ', value).strip()
 
+
+# The dictionary of base configuration information.
+# Clients may add additional information or overwrite existing one before
+# passing it to the logging.config.dictConfig() function
+# https://docs.python.org/3/library/logging.config.html#logging.config.dictConfig
+log_config_as_dict = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    # root logger
+    'root': {
+        'level': 'NOTSET',
+        'handlers': ['file'],
+    },
+    'formatters': {
+        'default': {
+            'format': (
+                '[%(asctime)s] (%(pathname)s:%(lineno)d) '
+                '%(levelname)s# %(name)s:: %(message)s'
+            ),
+        },
+        'precise': {
+            'format': (
+                '[%(asctime)s] [%(process)d:%(threadName)s] [%(levelname)s] '
+                '[%(name)s] {%(pathname)s:%(lineno)d} %(message)s'
+            )
+
+        }
+    },
+    'handlers': {
+        'file': {
+            'class': 'logging.FileHandler',
+            'level': 'DEBUG',
+            'formatter': 'precise',
+            'filename': '/tmp/spaced_rehearsal.log',
+        }
+    },
+    # Add here you custom loggers or specify logging for third-party modules.
+    'loggers': {
+        # Example of configuration of the python "tornado" module logging
+        # 'tornado': {
+        #     'handlers': ['file'],
+        #     'level': 'INFO'
+        # },
+    }
+}
