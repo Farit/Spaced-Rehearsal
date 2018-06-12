@@ -7,6 +7,7 @@ from src.config import ConfigAdapter
 from src.utils import TermColor, datetime_now, normalize_value
 from src.base import AsyncIO
 from src.scheduler import FlashcardScheduler
+from src.dictionary import Dictionary
 
 
 class CreateFlashcard:
@@ -18,6 +19,7 @@ class CreateFlashcard:
         self.db_session = DBSession(self.config['database'].get('name'))
         self.async_io = async_io
         self.source_tags = self.get_source_tags()
+        self.dictionary = Dictionary()
 
     def get_source_tags(self):
         tags = self.db_session.get_flashcard_source_tags(self.user_id)
@@ -59,9 +61,7 @@ class CreateFlashcard:
         await self.update_source_tags(source)
         flashcard.source = source
 
-        flashcard.phonetic_transcriptions = await self.async_io.input(
-            'Phonetic transcriptions'
-        )
+        await self.input_phonetic_spelling(flashcard)
 
         part_of_speech = await self.async_io.input('Part of speech')
         part_of_speech = part_of_speech.strip()
@@ -127,6 +127,28 @@ class CreateFlashcard:
         else:
             self.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Aborting flashcard.'))
+
+    async def input_phonetic_spelling(self, flashcard):
+        await self.async_io.print(
+            f'Please, wait a bit. Retrieving phonetic spellings.'
+        )
+        spellings = {}
+        answer_spelling = []
+        for word in flashcard.side_answer.split(' '):
+            if word.lower() not in spellings:
+                spelling = await self.dictionary.get_word_phonetic_spelling(word)
+                spellings[word.lower()] = f'/{spelling}/' if spelling else ''
+
+            answer_spelling.append(
+                (word, spellings[word.lower()])
+            )
+
+        pre_fill = ' '.join(f'{k} {v}' for k, v in answer_spelling)
+
+        flashcard.phonetic_transcriptions = await self.async_io.input(
+            'Phonetic transcriptions',
+            pre_fill=pre_fill
+        )
 
     async def show_duplicates(self, duplicates: List[Flashcard]):
         if duplicates:
