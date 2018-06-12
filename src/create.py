@@ -52,32 +52,10 @@ class CreateFlashcard:
         flashcard.side_question = await self.async_io.input('Question')
         flashcard.side_answer = await self.async_io.input('Answer')
 
-        source = await self.async_io.input(
-            'Source',
-            pre_fill=self.previous_sources[0] if self.previous_sources else '',
-            history=self.source_tags
-        )
-        self.previous_sources.appendleft(source)
-        await self.update_source_tags(source)
-        flashcard.source = source
-
+        await self.input_source(flashcard)
         await self.input_phonetic_spelling(flashcard)
-
-        part_of_speech = await self.async_io.input('Part of speech')
-        part_of_speech = part_of_speech.strip()
-
-        explanation = await self.async_io.input('Explanation')
-        if part_of_speech:
-            flashcard.explanation = f'[{part_of_speech}] {explanation}'
-        else:
-            flashcard.explanation = f'{explanation}'
-
-        examples = []
-        example = await self.async_io.input('Example')
-        while example:
-            examples.append(example)
-            example = await self.async_io.input('Example')
-        flashcard.set_examples(examples)
+        await self.input_explanation(flashcard)
+        await self.input_examples(flashcard)
 
         duplicates = self.db_session.search(
             flashcard.side_answer,
@@ -128,6 +106,16 @@ class CreateFlashcard:
             self.popleft_previous_sources()
             await self.async_io.print(TermColor.red('Aborting flashcard.'))
 
+    async def input_source(self, flashcard):
+        source = await self.async_io.input(
+            'Source',
+            pre_fill=self.previous_sources[0] if self.previous_sources else '',
+            history=self.source_tags
+        )
+        self.previous_sources.appendleft(source)
+        await self.update_source_tags(source)
+        flashcard.source = source
+
     async def input_phonetic_spelling(self, flashcard):
         await self.async_io.print(
             f'Please, wait a bit. Retrieving phonetic spellings.'
@@ -149,6 +137,24 @@ class CreateFlashcard:
             'Phonetic transcriptions',
             pre_fill=pre_fill
         )
+
+    async def input_explanation(self, flashcard):
+        part_of_speech = await self.async_io.input('Part of speech')
+        part_of_speech = part_of_speech.strip()
+
+        explanation = await self.async_io.input('Explanation')
+        if part_of_speech:
+            flashcard.explanation = f'[{part_of_speech}] {explanation}'
+        else:
+            flashcard.explanation = f'{explanation}'
+
+    async def input_examples(self, flashcard):
+        examples = []
+        example = await self.async_io.input('Example')
+        while example:
+            examples.append(example)
+            example = await self.async_io.input('Example')
+        flashcard.set_examples(examples)
 
     async def show_duplicates(self, duplicates: List[Flashcard]):
         if duplicates:
