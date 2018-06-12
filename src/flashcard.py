@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from typing import Optional, List
 
-from src.utils import normalize_value
+from src.utils import normalize_value, TermColor
 from src.scheduler import FlashcardState
 
 
@@ -191,8 +191,14 @@ class Flashcard(metaclass=FlashcardMetaclass):
         if 'phonetic_transcriptions' not in exclude_fields:
             phonetic_trans = (self.phonetic_transcriptions or "").strip()
             if phonetic_trans:
+                spelling = re.sub(
+                    r'\s/', f' {TermColor.BOLD}/', phonetic_trans
+                )
+                spelling = re.sub(
+                    r'/\s', f'/{TermColor.END} ', spelling
+                )
                 output.append(
-                    f'{term_color("Phonetic transcriptions: ")}{phonetic_trans}'
+                    f'{term_color("Phonetic transcriptions: ")}{spelling}'
                 )
 
         if 'explanation' not in exclude_fields:
