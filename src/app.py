@@ -63,12 +63,12 @@ class SpacedRehearsal:
                 f'Web server is running on '
                 f'http://{self.web_app.address}:{self.web_app.port}'
             )
-            await self.async_io.print(
+            await self.async_io.print_formatted_output([
                 TermColor.bold(f'Please, enter a username.'),
                 f'In case if requested user does not exist program will ask '
                 'confirmation to create it. ',
                 f'Pressing {TermColor.red("Ctrl+D")} terminates the program.',
-            )
+            ])
             login_name = await self.async_io.input('Login')
             user = self.db_session.get_user(login_name)
             if user is None:

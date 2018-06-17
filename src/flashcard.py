@@ -1,3 +1,4 @@
+import logging
 import textwrap
 import re
 
@@ -6,6 +7,9 @@ from typing import Optional, List
 
 from src.utils import normalize_value, TermColor
 from src.scheduler import FlashcardState
+
+
+logger = logging.getLogger(__name__)
 
 
 class Field:
@@ -156,76 +160,106 @@ class Flashcard(metaclass=FlashcardMetaclass):
         else:
             raise TypeError(f'Value {state!r} must be state or str')
 
-    def pformat(self, term_color, exclude_fields=None):
+    def pformat(self, term_color, exclude_fields=None, include_fields=None):
         """
         :param term_color: TermColor colour, e.g TermColor.grey or
         TermColor.purple
-        :param exclude_fields: Which flashcard's fields must be excluded.
+        :param exclude_fields: Which flashcard fields must be excluded.
+        :param include_fields: Which flashcard fields must be included.
         """
-        exclude_fields = exclude_fields or []
+        if exclude_fields is not None and include_fields is not None:
+            raise Exception(
+                'You can not specify both exclude_fields and include_fields'
+            )
+
+        available_fields_to_format = [
+            'side_question',
+            'side_answer',
+            'review_timestamp',
+            'source',
+            'phonetic_transcriptions',
+            'explanation',
+            'examples',
+            'created'
+        ]
+
         output = []
 
-        if 'side_question' not in exclude_fields:
-            output.append(
-                f'{term_color("Question: ")}{self.side_question}'
-            )
+        if exclude_fields is not None:
+            fields_to_format = [
+                f for f in available_fields_to_format if f not in exclude_fields
+            ]
+        elif include_fields is not None:
+            fields_to_format = include_fields
+        else:
+            fields_to_format = available_fields_to_format
 
-        if 'side_answer' not in exclude_fields:
-            output.append(
-                f'{term_color("Answer: ")}{self.side_answer}'
-            )
+        for field in fields_to_format:
+            output.extend(self._pformat_field(term_color, field))
 
-        if 'review_timestamp' not in exclude_fields:
-            output.append(
-                f'{term_color("Review date: ")}'
-                f'{self.review_timestamp}',
-            )
+        return output
 
-        if 'source' not in exclude_fields:
+    def _pformat_field(self, term_color, field):
+        """
+        :param term_color: TermColor colour, e.g TermColor.grey or
+        TermColor.purple
+        :param field: Which flashcard field must be formatted.
+        """
+        if field == 'side_question':
+            return [f'{term_color("Question: ")}{self.side_question}']
+
+        if field == 'side_answer':
+            return [f'{term_color("Answer: ")}{self.side_answer}']
+
+        if field == 'review_timestamp':
+            return [f'{term_color("Review date: ")}{self.review_timestamp}']
+
+        if field == 'source':
             source = (self.source or "").strip()
-            if source:
-                output.append(
-                    f'{term_color("Source: ")}{source}'
-                )
+            return [f'{term_color("Source: ")}{source}'] if source else []
 
-        if 'phonetic_transcriptions' not in exclude_fields:
-            phonetic_trans = (self.phonetic_transcriptions or "").strip()
-            if phonetic_trans:
-                spelling = re.sub(
-                    r'\s/', f' {TermColor.BOLD}/', phonetic_trans
-                )
-                spelling = re.sub(
-                    r'/\s', f'/{TermColor.END} ', spelling
-                )
-                output.append(
-                    f'{term_color("Phonetic transcriptions: ")}{spelling}'
-                )
+        if field == 'phonetic_transcriptions':
+            spelling = (self.phonetic_transcriptions or "").strip()
+            if spelling:
+                res = f'{term_color("Phonetic transcriptions: ")}{spelling}'
 
-        if 'explanation' not in exclude_fields:
+                # Order of the substitution matters.
+                spelling_highlight = re.sub(
+                    r'(?<=[^\s])/\s?', f'/{TermColor.END} ', spelling
+                )
+                if spelling_highlight != spelling:
+                    spelling_highlight = re.sub(
+                        r'\s/', f' {TermColor.BOLD}/', spelling_highlight
+                    )
+                    res = (
+                        f'{term_color("Phonetic transcriptions: ")}'
+                        f'{spelling_highlight}'
+                    )
+
+                return [res]
+            return []
+
+        if field == 'explanation':
             explanation = (self.explanation or "").strip()
             if explanation:
-                output.append(
-                    f'{term_color("Explanation: ")}{explanation}'
-                )
+                return [f'{term_color("Explanation: ")}{explanation}']
+            return []
 
-        if 'examples' not in exclude_fields:
+        if field == 'examples':
+            output = []
             examples = self.get_examples()
             if examples:
-                output.append(f'{term_color("Examples: ")}')
+                output = [f'{term_color("Examples: ")}']
                 examples.sort(reverse=True)
                 for ind, example in enumerate(examples, start=1):
                     example = example.strip()
                     if example:
                         formatted_example = f'{ind}: {example}'
                         output.append(textwrap.indent(formatted_example, ' '*4))
+            return output
 
-        if 'created' not in exclude_fields:
-            output.append(
-                f'{term_color("Created date: ")}'
-                f'{self.created}',
-            )
-
-        return output
+        if field == 'created':
+            return [f'{term_color("Created date: ")}{self.created}']
 
     def __str__(self):
         return f'[{self.side_question}] / [{self.side_answer}]'

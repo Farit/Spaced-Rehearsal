@@ -5,6 +5,8 @@ from src.config import ConfigAdapter
 from src.utils import TermColor, normalize_value
 from src.base import AsyncIO
 from src.flashcard import Flashcard
+from src.text_to_speech import TextToSpeech
+from src.media_player import Player
 from src.scheduler import FlashcardScheduler
 
 
@@ -35,16 +37,20 @@ class Play:
             await self._play_flashcard(flashcard)
             self.stats['played'] += 1
 
-            if self.stats['played'] < self.stats['total']:
-                action = await self.async_io.input_action(
-                    action_answers=('y', 'n'),
-                    action_msgs=[
-                        f'Do you want to continue '
-                        f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
-                    ]
+            audio_file = TextToSpeech(flashcard=flashcard).synthesize_audio()
+
+            if audio_file:
+                action = await self.get_action_with_audio(
+                    flashcard=flashcard,
+                    audio_file=audio_file
                 )
-                if action == 'n':
-                    break
+            else:
+                action = await self.get_action_without_audio(
+                    flashcard=flashcard
+                )
+
+            if action == 'q':
+                break
 
         await self.print_game_score()
 
@@ -113,3 +119,43 @@ class Play:
 
         output.append(f'Game is over!')
         await self.async_io.print(*output)
+
+    async def get_action_without_audio(self, flashcard):
+        action = await self.async_io.input_action(
+            action_answers=('c', 'q'),
+            action_msgs=[
+                f'Do you want to continue, '
+                f'continue [{TermColor.green("c")}], '
+                f'quit [{TermColor.red("q")}]?'
+            ]
+        )
+        return action
+
+    async def get_action_with_audio(self, flashcard, audio_file):
+        while True:
+            output = ["Do you want to hear how to pronounce?"]
+            output.extend(
+                flashcard.pformat(
+                    term_color=TermColor.light_blue,
+                    include_fields=[
+                        'side_answer',
+                        'phonetic_transcriptions'
+                    ]
+                )
+            )
+            await self.async_io.print_formatted_output(output)
+
+            action = await self.async_io.input_action(
+                action_answers=('y', 'c', 'q'),
+                action_msgs=[
+                    f'Please enter, '
+                    f'yes [{TermColor.light_blue("y")}], '
+                    f'continue [{TermColor.green("c")}], '
+                    f'quit [{TermColor.red("q")}]'
+                ]
+            )
+
+            if action == 'y':
+                Player(audio_file=audio_file).play()
+            else:
+                return action

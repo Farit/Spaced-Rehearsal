@@ -1,11 +1,15 @@
 import sys
+import logging
 import readline
 import textwrap
+import shutil
 import asyncio
 
 from functools import partial
 
 from src.utils import TermColor
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncIO:
@@ -74,8 +78,9 @@ class AsyncIO:
 
     async def print_formatted_output(self, output):
         formatted_output = []
+        terminal_size = shutil.get_terminal_size()
         for line in output:
-            output_lines = textwrap.wrap(line, width=100)
+            output_lines = textwrap.wrap(line, width=(terminal_size[0] - 10))
             for ind, output_line in enumerate(output_lines):
                 if ind == 0:
                     formatted_output.append(output_line)
