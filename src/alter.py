@@ -3,6 +3,7 @@ from src.config import ConfigAdapter
 from src.utils import TermColor
 from src.search import Search
 from src.base import AsyncIO
+from src.dictionary import Dictionary
 
 
 class AlterFlashcard:
@@ -15,6 +16,7 @@ class AlterFlashcard:
         self.search = Search(
             user_id=user_id, async_io=self.async_io
         )
+        self.dictionary = Dictionary()
 
     async def alter(self):
         await self.async_io.print(
@@ -83,10 +85,33 @@ class AlterFlashcard:
             'Source',
             pre_fill=flashcard.source
         )
+
+        if not flashcard.phonetic_transcriptions:
+            phonetic_spelling = await self.get_phonetic_spelling(flashcard)
+            flashcard.phonetic_transcriptions = phonetic_spelling
+
         flashcard.phonetic_transcriptions = await self.async_io.input(
             'Phonetic transcriptions',
             pre_fill=flashcard.phonetic_transcriptions
         )
+
+        action_msgs = [
+            f'Do you want to regenerate phonetic transcription'
+            f'[{TermColor.green("y")}/{TermColor.red("n")}] ?',
+        ]
+
+        action = await self.async_io.input_action(
+            action_answers=('y', 'n'), action_msgs=action_msgs
+        )
+
+        if action == 'y':
+            phonetic_spelling = await self.get_phonetic_spelling(flashcard)
+            flashcard.phonetic_transcriptions = phonetic_spelling
+            flashcard.phonetic_transcriptions = await self.async_io.input(
+                'Phonetic transcriptions',
+                pre_fill=flashcard.phonetic_transcriptions
+            )
+
         flashcard.explanation = await self.async_io.input(
             'Explanation',
             pre_fill=flashcard.explanation
@@ -120,3 +145,21 @@ class AlterFlashcard:
             )
         )
         await self.async_io.print_formatted_output(output)
+
+    async def get_phonetic_spelling(self, flashcard):
+        await self.async_io.print(
+            f'Please, wait a bit. Retrieving phonetic spellings.'
+        )
+        spellings = {}
+        answer_spelling = []
+        for word in flashcard.side_answer.split(' '):
+            if word.lower() not in spellings:
+                spelling = await self.dictionary.get_word_phonetic_spelling(word)
+                spellings[word.lower()] = f'/{spelling}/' if spelling else ''
+
+            answer_spelling.append(
+                (word, spellings[word.lower()])
+            )
+
+        return ' '.join(f'{k} {v}' for k, v in answer_spelling)
+
