@@ -24,7 +24,7 @@ class AlterFlashcard:
             f'Pressing {TermColor.red("Ctrl+D")} terminates altering.'
         )
 
-        flashcards = await self.search()
+        flashcards = await self.search.conduct_search()
 
         if flashcards:
             flashcards = {

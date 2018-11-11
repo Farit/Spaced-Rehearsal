@@ -8,6 +8,7 @@ from src.config import ConfigAdapter
 from src.db_session import DBSession
 from src.create import CreateFlashcard
 from src.play import Play
+from src.search import Search
 from src.alter import AlterFlashcard
 from src.delete import DeleteFlashcard
 from src.utils import TermColor, datetime_now
@@ -21,6 +22,7 @@ class SpacedRehearsal:
         self.user = None
         self.create_flashcard: CreateFlashcard = None
         self.play_flashcards: Play = None
+        self.search_flashcard: Search = None
         self.alter_flashcard: AlterFlashcard = None
         self.delete_flashcard: DeleteFlashcard = None
         self.loop = asyncio.get_event_loop()
@@ -104,6 +106,9 @@ class SpacedRehearsal:
                 self.play_flashcards = Play(
                     user_id=self.user['id'], async_io=self.async_io
                 )
+                self.search_flashcard = Search(
+                    user_id=self.user['id'], async_io=self.async_io
+                )
                 self.alter_flashcard = AlterFlashcard(
                     user_id=self.user['id'], async_io=self.async_io
                 )
@@ -138,7 +143,7 @@ class SpacedRehearsal:
             )
 
             action = await self.async_io.input_action(
-                action_answers=('c', 'p', 'a', 'd', 'q'),
+                action_answers=('c', 'p', 'a', 's', 'd', 'q'),
                 action_msgs=[
                     f'If you want to {TermColor.yellow("create")} a new '
                     f'flashcard, please enter {TermColor.yellow("c")}.',
@@ -146,6 +151,8 @@ class SpacedRehearsal:
                     f' please enter {TermColor.green("p")}.',
                     f'If you want to {TermColor.light_blue("alter")} '
                     f'a flashcard, please enter {TermColor.light_blue("a")}.',
+                    f'If you want to {TermColor.light_blue("search")} '
+                    f'a flashcard, please enter {TermColor.light_blue("s")}.',
                     f'If you want to {TermColor.red("delete")} '
                     f'a flashcard, please enter {TermColor.red("d")}.',
                     f'',
@@ -159,6 +166,8 @@ class SpacedRehearsal:
                 asyncio.ensure_future(self.play(), loop=self.loop)
             elif action == 'a':
                 asyncio.ensure_future(self.alter(), loop=self.loop)
+            elif action == 's':
+                asyncio.ensure_future(self.search(), loop=self.loop)
             elif action == 'd':
                 asyncio.ensure_future(self.delete(), loop=self.loop)
             else:
@@ -189,6 +198,19 @@ class SpacedRehearsal:
 
         except Exception as err:
             self.create_flashcard.popleft_previous_sources()
+            await self.async_io.print(TermColor.red('Error!'))
+            raise err
+
+        finally:
+            asyncio.ensure_future(self.choose_action(), loop=self.loop)
+
+    async def search(self):
+        try:
+            await self.search_flashcard.launch_search()
+        except EOFError:
+            await self.async_io.print(TermColor.red('Termination!'))
+
+        except Exception as err:
             await self.async_io.print(TermColor.red('Error!'))
             raise err
 
