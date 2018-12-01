@@ -7,17 +7,21 @@ import asyncio
 
 from functools import partial
 
-from src.utils import TermColor
+from src.formatting import Formatting
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncIO:
+class AsyncStdIO:
     wait_timeout = 0.01
 
-    def __init__(self, loop):
-        self.loop = loop
+    def __init__(self):
+        self.loop = None
         self.queue = asyncio.Queue()
+        self.formatting = Formatting()
+
+    def set_loop(self, loop):
+        self.loop = loop
 
     def handle_stdout(self, msg):
         sys.stdout.buffer.write(msg.encode('utf-8'))
@@ -41,15 +45,28 @@ class AsyncIO:
             readline.set_startup_hook()
 
     async def print(self, *msgs):
-        message = '\n...: ' + '\n...: '.join(msgs)
-        message = f'...: {message}\n'
+        formatted_msgs = []
+        terminal_size = shutil.get_terminal_size()
+        width = terminal_size[0] - 10
+        for msg in msgs:
+            if len(msg) > 1:
+                output_lines = textwrap.wrap(msg, width=width)
+                for ind, output_line in enumerate(output_lines):
+                    if ind != 0:
+                        output_line = textwrap.indent(output_line, ' '*4)
+                    formatted_msgs.append(output_line)
+            else:
+                formatted_msgs.append(msg)
+
+        message = '...: ' + '\n...: '.join(formatted_msgs)
+        message = f'{message}\n'
         self.loop.add_writer(
             sys.stdout, partial(self.handle_stdout, message)
         )
         await asyncio.sleep(self.wait_timeout)
 
     async def input(self, msg, pre_fill='', history=None):
-        message = TermColor.grey(f'[{msg}] ->: ', is_escape_seq=True)
+        message = self.formatting.grey(f'[{msg}] ->: ', is_escape_seq=True)
         future = self.loop.run_in_executor(
             None, self.blocking_input, message, pre_fill, history
         )
@@ -70,21 +87,11 @@ class AsyncIO:
         while action not in action_answers:
             await self.print(*action_msgs)
             if action is not None:
-                await self.print(TermColor.red(f'Invalid command: {action}'))
+                msg = self.formatting.red(f'Invalid command: {action}')
+                await self.print(msg)
+
             action = await self.input('Action')
             action = action.lower()
 
         return action
 
-    async def print_formatted_output(self, output):
-        formatted_output = []
-        terminal_size = shutil.get_terminal_size()
-        for line in output:
-            output_lines = textwrap.wrap(line, width=(terminal_size[0] - 10))
-            for ind, output_line in enumerate(output_lines):
-                if ind == 0:
-                    formatted_output.append(output_line)
-                else:
-                    formatted_output.append(textwrap.indent(output_line, ' '*4))
-
-        await self.print(*formatted_output)
