@@ -6,11 +6,12 @@ from datetime import datetime
 from itertools import groupby
 from typing import List
 
-from src.flashcard import Flashcard
-from src.scheduler import FlashcardState
+from src.flashcard import Flashcard, FlashcardContainer, FlashcardState
 from src.utils import (
-    datetime_now, datetime_change_timezone,
-    convert_datetime_to_local
+    datetime_now,
+    datetime_change_timezone,
+    convert_datetime_to_local,
+    normalize_value
 )
 
 
@@ -224,7 +225,7 @@ class DBSession:
 
     def add_flashcard(self, flashcard: Flashcard) -> None:
         with self.db_conn:
-            data = dict(flashcard)
+            data = flashcard.to_dict_on_saving()
 
             # Convert timestamps to UTC.
             data['review_timestamp'] = datetime_change_timezone(
@@ -253,7 +254,7 @@ class DBSession:
                 'source=:source, explanation=:explanation, examples=:examples, '
                 'phonetic_transcriptions=:phonetic_transcriptions '
                 'WHERE id=:flashcard_id',
-                dict(flashcard)
+                flashcard.to_dict_on_updating()
             )
 
     def delete_flashcard(self, flashcard: Flashcard) -> None:
@@ -280,8 +281,9 @@ class DBSession:
                 }
             )
 
-    def search(self, *search_queries, user_id) -> List[Flashcard]:
-        flashcards = []
+    def search(self, *search_queries, user_id) -> FlashcardContainer:
+        flashcard_container = FlashcardContainer()
+
         search_queries = [
             s.strip().lower() for s in search_queries if s.strip()
         ]
@@ -319,9 +321,9 @@ class DBSession:
                     flashcard['created'] = convert_datetime_to_local(
                         row['created']
                     )
-                    flashcards.append(Flashcard(**flashcard))
+                    flashcard_container.add(Flashcard(**flashcard))
 
-        return flashcards
+        return flashcard_container
 
     def get_vis_by_date(self, user_id):
         query = self.db_cursor.execute(
@@ -364,3 +366,20 @@ class DBSession:
             {'user_id': user_id}
         )
         return [row['tag'] for row in query]
+
+    def get_source_tags(self, user_id):
+        query = self.db_cursor.execute(
+            'SELECT distinct(source) as tag '
+            'FROM flashcards '
+            'WHERE user_id = :user_id '
+            'ORDER BY created desc;',
+            {'user_id': user_id}
+        )
+        source_tags = []
+        for row in query:
+            tag = (row['tag'] or '').strip()
+            if tag:
+                tag = normalize_value(value=tag, remove_trailing='.')
+                source_tags.append(tag.capitalize() + '.')
+
+        return source_tags
