@@ -1,5 +1,6 @@
 import re
 import time
+import math
 import datetime
 import string
 
@@ -52,6 +53,20 @@ def normalize_value(value, *, remove_trailing=None, to_lower=False):
 
 def remove_whitespaces(value):
     return re.sub(r'[\s]{2,}', r' ', value).strip()
+
+
+def get_human_readable_file_size(size_bytes):
+    if not isinstance(size_bytes, int):
+        return
+
+    if size_bytes == 0:
+        return "0B"
+
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return f"{s} {size_name[i]}"
 
 
 # The dictionary of base configuration information.
