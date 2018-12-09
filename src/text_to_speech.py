@@ -22,9 +22,27 @@ class TextToSpeech:
         self.ibm_eng_tts = IbmEngTextToSpeech(config)
 
     async def synthesize_audio(self, text):
+        audio_file = None
+        log_prefix_msg = (
+            f'Synthesize audio for text={text}.'
+            f'lang={self.lang.value}.'
+        )
         if self.lang == self.Lang.ENG:
+            logger.info(
+                f'{log_prefix_msg} '
+                f'Trying IBM English text to speech.'
+            )
+
+            if not self.ibm_eng_tts.is_in_service:
+                logger.info(
+                    f'{log_prefix_msg} '
+                    f'IBM English text to speech is out of service.'
+                )
+                return audio_file
+
             audio_file = await self.ibm_eng_tts.synthesize_audio(text)
-            return audio_file
+            
+        return audio_file
 
 
 class IbmEngTextToSpeech:
@@ -38,6 +56,14 @@ class IbmEngTextToSpeech:
         self.auth_username = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_USERNAME')
         self.auth_password = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_PASSWORD')
         self.http_client = AsyncHTTPClient()
+
+    @property
+    def is_in_service(self):
+        return (
+                bool(self.auth_username) and
+                bool(self.auth_password) and
+                bool(self.api_base_url)
+        )
 
     async def synthesize_audio(self, text):
         params = urllib.parse.urlencode({'voice': 'en-US_MichaelVoice'})
