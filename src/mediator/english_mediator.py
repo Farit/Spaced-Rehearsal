@@ -1,5 +1,5 @@
 import os
-import path
+import pathlib
 import os.path
 
 from typing import List
@@ -9,6 +9,7 @@ from src.flashcard import Flashcard
 from src.dictionary import Dictionary
 from src.text_to_speech import TextToSpeech
 from src.media_player import Player
+from src.utils import get_human_readable_file_size
 
 from src.actions import (
     EnglishReviewAction,
@@ -22,12 +23,21 @@ class EnglishMediator(Mediator):
     def __init__(self):
         super().__init__()
         self.dictionary = Dictionary(lang=Dictionary.Lang.ENG)
-        self.text_to_speech = TextToSpeech(lang=TextToSpeech.Lang.ENG)
+        self.text_to_speech = TextToSpeech(
+            lang=TextToSpeech.Lang.ENG,
+            config=self.config
+        )
         self.media_player = Player()
 
     @classmethod
     def name(cls):
         return 'english'
+
+    @property
+    def project_root_path(self) -> pathlib.Path:
+        current_dir = os.path.dirname(__file__)
+        root = os.path.abspath(os.path.join(current_dir, '../..'))
+        return pathlib.Path(root)
 
     def make_review_action(self):
         return EnglishReviewAction(mediator=self)
@@ -52,11 +62,10 @@ class EnglishMediator(Mediator):
 
     async def play_audio_answer(self, flashcard):
         audio_file_path = self._form_audio_answer_file_path(flashcard)
-        if os.path.isfile(audio_file_path):
-            self.media_player.play(audio_file_path)
+        self.media_player.play(str(audio_file_path))
 
-    async def has_audio_answer(self, flashcard):
-        fp = path.Path(self._form_audio_answer_file_path(flashcard))
+    async def has_audio_answer(self, flashcard) -> bool:
+        fp = self._form_audio_answer_file_path(flashcard)
         return fp.exists()
 
     async def _download_audio_answer(self, flashcard):
@@ -65,27 +74,30 @@ class EnglishMediator(Mediator):
             text=flashcard.answer
         )
         if file_data:
-            fp = path.Path(self._form_audio_answer_file_path(flashcard))
-            fp.dirname().makedirs_p()
-            await self.print(f'Saving audio answer: {fp}')
-            with open(fp, 'wb') as fh:
-                fh.write(file_data)
+            fp = self._form_audio_answer_file_path(flashcard)
+            fp.parent.mkdir(parents=True, exist_ok=True)
+            fp.write_bytes(file_data)
+
+            await self.print(f'Saved audio answer:')
+            relative_file_path = fp.relative_to(self.project_root_path)
+            await self.print(f'    File path: {relative_file_path}')
+            file_size = get_human_readable_file_size(fp.stat().st_size)
+            await self.print(f'    File size: {file_size}', bottom_margin=1)
+        else:
+            await self.print(f"Couldn't get audio answer", bottom_margin=1)
 
     async def _remove_audio_answer(self, flashcard):
-        fp = path.Path(self._form_audio_answer_file_path(flashcard))
+        fp = self._form_audio_answer_file_path(flashcard)
         if fp.exists():
-            os.remove(fp)
-            os.rmdir(fp.dirname())
+            os.remove(str(fp))
+            os.rmdir(str(fp.parent))
 
-    def _form_audio_answer_file_path(self, flashcard):
-        root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '../..')
-        )
+    def _form_audio_answer_file_path(self, flashcard) -> pathlib.Path:
         audio_file_path = (
             f'audio/{self.name()}/{flashcard.id}/'
-            f'audio_{flashcard.id}.wav'
+            f'audio_{flashcard.id}.mp3'
         )
-        return os.path.join(root, audio_file_path)
+        return self.project_root_path.joinpath(audio_file_path)
 
     async def input_phonetic_transcription(self, data):
         await self.print(
