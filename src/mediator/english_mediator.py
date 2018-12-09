@@ -22,7 +22,10 @@ class EnglishMediator(Mediator):
 
     def __init__(self):
         super().__init__()
-        self.dictionary = Dictionary(lang=Dictionary.Lang.ENG)
+        self.dictionary = Dictionary(
+            lang=Dictionary.Lang.ENG,
+            config=self.config
+        )
         self.text_to_speech = TextToSpeech(
             lang=TextToSpeech.Lang.ENG,
             config=self.config
@@ -104,24 +107,11 @@ class EnglishMediator(Mediator):
             f'Please, wait a bit. Retrieving phonetic spellings.',
             bold=True
         )
-        spellings = {}
-        data_spelling = []
-
-        for word in data.split(' '):
-            if word.lower() not in spellings:
-                spelling = await self.dictionary.get_word_phonetic_spelling(
-                    word
-                )
-                spellings[word.lower()] = f'/{spelling}/' if spelling else ''
-
-            data_spelling.append(
-                (word, spellings[word.lower()])
-            )
-
-        pre_fill = ' '.join(f'{k} {v}' for k, v in data_spelling)
-
+        text_spelling = await self.dictionary.get_text_phonetic_spelling(
+            text=data
+        )
         phonetic_transcription = await self.input(
-            'Phonetic transcription', pre_fill=pre_fill
+            'Phonetic transcription', pre_fill=text_spelling
         )
         return phonetic_transcription
  

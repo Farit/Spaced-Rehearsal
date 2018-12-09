@@ -1,3 +1,4 @@
+import enum
 import logging
 import json
 import string
@@ -7,37 +8,65 @@ from tornado.httpclient import (
     AsyncHTTPClient, HTTPRequest, HTTPResponse, HTTPError
 )
 
-from src.config import ConfigAdapter
-
-
 logger = logging.getLogger(__name__)
 
 
 class Dictionary:
+    class Lang(enum.Enum):
+        ENG = 'english'
 
-    def __init__(self):
-        self.oxford_dict = OxfordDictionary()
+    def __init__(self, lang: Lang, config):
+        self.lang = lang
+        self.config = config
+        self.oxford_eng_dict = OxfordEngDictionary(config=config)
 
-    async def get_word_phonetic_spelling(self, word, source_lang='en'):
-        phonetic_spelling = None
-        normalized_word = self._normalize_word(word)
+    async def get_text_phonetic_spelling(self, text):
+        result = []
+        spellings = {}
 
-        logger.info(
-            f'Get word phonetic spelling: word={word}. '
-            f'Trying oxford dictionary'
+        for word in text.split():
+            normalized_word = self._normalize_word(word)
+            if normalized_word not in spellings:
+                spelling = await self.get_word_phonetic_spelling(
+                    normalized_word
+                )
+                spellings[normalized_word] = f'/{spelling}/'
+
+            result.append((normalized_word, spellings[normalized_word]))
+
+        return '   '.join(f'{word}: {spelling}' for word, spelling in result)
+
+    async def get_word_phonetic_spelling(self, word):
+        spelling = None
+        log_prefix_msg = (
+            f'Get word phonetic spelling: word={word}, '
+            f'lang={self.lang.value}.'
         )
-        if self.oxford_dict.is_in_service:
-            phonetic_spelling = await self.oxford_dict.get_word_phonetic_spelling(
-                word=normalized_word,
-                source_lang=source_lang
-            )
-        else:
+
+        if self.lang == self.Lang.ENG:
             logger.info(
-                f'Get word phonetic spelling: word={word}. '
-                f'Oxford dictionary is out of service.'
+                f'{log_prefix_msg} '
+                f'Trying Oxford English Dictionary.'
             )
 
-        return phonetic_spelling
+            if not self.oxford_eng_dict.is_in_service:
+                logger.info(
+                    f'{log_prefix_msg} '
+                    f'Oxford English Dictionary is out of service.'
+                )
+                return spelling
+
+            spelling = await self.oxford_eng_dict.get_word_phonetic_spelling(
+                word=word,
+                is_lemmatize=False
+            )
+            if not spelling:
+                spelling = await self.oxford_eng_dict.get_word_phonetic_spelling(
+                    word=word,
+                    is_lemmatize=True
+                )
+
+        return spelling
 
     @staticmethod
     def _normalize_word(word):
@@ -46,10 +75,14 @@ class Dictionary:
         return normalized_word
 
 
-class OxfordDictionary:
+class OxfordEngDictionary:
+    """
+    Docs: https://developer.oxforddictionaries.com/documentation
+    """
+    source_lang = 'en'
 
-    def __init__(self):
-        self.config = ConfigAdapter(filename='config.cfg')
+    def __init__(self, config):
+        self.config = config
         self.api_base_url = self.config['dictionary'].get(
             'oxford_dict_api_base_url'
         )
@@ -60,62 +93,31 @@ class OxfordDictionary:
     @property
     def is_in_service(self):
         return (
-            bool(self.app_id) and bool(self.app_key) and bool(self.api_base_url)
+            bool(self.app_id) and
+            bool(self.app_key) and
+            bool(self.api_base_url)
         )
 
-    async def get_word_phonetic_spelling(
-            self, word, source_lang, is_lemmatize=False
-    ):
+    async def get_word_phonetic_spelling(self, word, is_lemmatize=False):
         logger.info(
             f'Get word phonetic spelling: word={word}, '
-            f'source_lang={source_lang}, '
+            f'source_lang={self.source_lang}, '
             f'is_lemmatize={is_lemmatize}'
         )
         spelling = None
         try:
             if is_lemmatize:
-                root_form = await self._retrieve_word_root_form(
-                    word=word,
-                    source_lang=source_lang
-                )
-                lexical_entries = root_form['results'][0]['lexicalEntries']
-                inflections = lexical_entries[0]['inflectionOf']
-                word = inflections[0]['id']
-
-            word_info = await self._retrieve_info_for_a_given_word(
-                word=word,
-                source_lang=source_lang
-            )
-            lexical_entries = word_info['results'][0]['lexicalEntries']
-            pronunciations = lexical_entries[0]['pronunciations']
-            spelling = pronunciations[0]['phoneticSpelling']
+                word = await self._retrieve_root_form(word=word)
+            spelling = await self._retrieve_spelling(word=word)
 
         except EntryNotFound as err:
-            if not is_lemmatize:
-                logger.error(
-                    f'Get word phonetic spelling: word={word}, err={err}. '
-                    f'Trying lemmatization.'
-                )
-                spelling = await self.get_word_phonetic_spelling(
-                    word=word,
-                    source_lang=source_lang,
-                    is_lemmatize=True
-                )
-            else:
-                logger.error(
-                    f'Get word phonetic spelling: word={word}, err={err}. '
-                )
-
-        except Exception as err:
-            logger.exception(
-                f'Get word phonetic spelling: word={word}, err={err}'
-            )
+            logger.error(f'Get word phonetic spelling: word={word}, err={err}')
 
         return spelling
 
-    async def _retrieve_info_for_a_given_word(self, word, source_lang):
+    async def _retrieve_spelling(self, word):
         word_id = word
-        url = f'{self.api_base_url}/entries/{source_lang}/{word_id}'
+        url = f'{self.api_base_url}/entries/{self.source_lang}/{word_id}'
         http_request = HTTPRequest(
             url,
             method='GET',
@@ -125,11 +127,14 @@ class OxfordDictionary:
             }
         )
         response = await self._make_request(http_request)
-        return response
+        lexical_entries = response['results'][0]['lexicalEntries']
+        pronunciations = lexical_entries[0]['pronunciations']
+        spelling = pronunciations[0]['phoneticSpelling']
+        return spelling
 
-    async def _retrieve_word_root_form(self, word, source_lang):
+    async def _retrieve_root_form(self, word):
         word_id = word
-        url = f'{self.api_base_url}/inflections/{source_lang}/{word_id}'
+        url = f'{self.api_base_url}/inflections/{self.source_lang}/{word_id}'
         http_request = HTTPRequest(
             url,
             method='GET',
@@ -139,7 +144,10 @@ class OxfordDictionary:
             }
         )
         response = await self._make_request(http_request)
-        return response
+        lexical_entries = response['results'][0]['lexicalEntries']
+        inflections = lexical_entries[0]['inflectionOf']
+        word_root_form = inflections[0]['id']
+        return word_root_form
 
     async def _make_request(self, http_request: HTTPRequest):
         try:
