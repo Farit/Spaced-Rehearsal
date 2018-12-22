@@ -1,6 +1,8 @@
+import re
 import bisect
 import random
 import sqlite3
+import logging
 
 from datetime import datetime
 from itertools import groupby
@@ -13,6 +15,8 @@ from src.utils import (
     convert_datetime_to_local,
     normalize_value
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DBSession:
@@ -46,6 +50,7 @@ class DBSession:
         if setup_db:
             self.setup_users_table()
             self.setup_flashcards_table()
+            self.setup_flashcard_example_table()
             self.setup_flashcard_states_table()
             self.setup_trigger_log_update_flashcard_state()
             self.setup_trigger_log_insert_flashcard_state()
@@ -96,6 +101,19 @@ class DBSession:
             with open('sql/flashcards.sql') as fh:
                 flashcards_table = fh.read()
             self.db_cursor.execute(flashcards_table)
+            self.db_conn.commit()
+
+    def setup_flashcard_example_table(self):
+        self.db_cursor.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='flashcard_example';
+        """)
+        flashcard_example_table = self.db_cursor.fetchone()
+        if flashcard_example_table is None:
+            with open('sql/flashcard_example.sql') as fh:
+                flashcard_example_table = fh.read()
+            self.db_cursor.execute(flashcard_example_table)
             self.db_conn.commit()
 
     def setup_flashcard_states_table(self):
@@ -188,30 +206,91 @@ class DBSession:
             )
         return query.fetchone()['count(*)']
 
-    def get_ready_flashcards(self, user_id: int) -> List[Flashcard]:
+    def _get_flashcards(
+            self, request: str, request_params: dict=None
+    ) -> List[Flashcard]:
+
+        request_params = request_params or {}
         query = self.db_cursor.execute(
-            'SELECT '
-            'id as flashcard_id, user_id, side_question, side_answer, '
-            'review_timestamp, source, explanation, examples, '
-            'phonetic_transcriptions, created, state '
-            'FROM flashcards '
-            'WHERE user_id = ? AND '
-            'datetime(review_timestamp, "localtime") <= ? '
-            'ORDER BY datetime(review_timestamp, "localtime")',
-            (user_id, datetime_now())
+            f'SELECT '
+            f'    id as flashcard_id, '
+            f'    user_id, '
+            f'    side_question, '
+            f'    side_answer, '
+            f'    review_timestamp, '
+            f'    source, '
+            f'    explanation, '
+            f'    phonetic_transcriptions, '
+            f'    created, '
+            f'    state '
+            f'FROM flashcards '
+            f'{request}',
+            request_params
         )
         flashcards = []
         for row in query:
-            flashcard = dict(row)
-            flashcard['review_timestamp'] = convert_datetime_to_local(
-                row['review_timestamp']
+            data = dict(row)
+            examples = self.db_cursor.execute(
+                'SELECT example '
+                'FROM flashcard_example '
+                'WHERE flashcard_id = :flashcard_id',
+                {'flashcard_id': data['flashcard_id']}
             )
-            flashcard['created'] = convert_datetime_to_local(
-                row['created']
-            )
-            flashcards.append(Flashcard(**flashcard))
+            data['examples'] = [r['example'] for r in examples]
 
-        shuffled_flashcards = []
+            state_match = re.match(
+                r'''
+                    ^(?P<state>.+);
+                    (?P<answer_difficulty>.+);
+                    (?P<delay>.+);
+                    (?P<mem_strength>.+)$
+                ''',
+                data['state'],
+                flags=re.VERBOSE
+            )
+            state = state_match.group('state')
+            answer_difficulty = float(state_match.group('answer_difficulty'))
+            delay = int(state_match.group('delay'))
+            mem_strength = state_match.group('mem_strength')
+            mem_strength = (
+                int(mem_strength) if mem_strength != 'None' else None
+            )
+            flashcard = Flashcard(
+                user_id=data['user_id'],
+                question=data['side_question'],
+                answer=data['side_answer'],
+                created=convert_datetime_to_local(data['created']),
+                state=FlashcardState(
+                    state=state, answer_difficulty=answer_difficulty,
+                    delay=delay, mem_strength=mem_strength
+                ),
+                review_timestamp=convert_datetime_to_local(
+                    data['review_timestamp']
+                ),
+                flashcard_id=data['flashcard_id'],
+                phonetic_transcription=data['phonetic_transcriptions'],
+                source=data['source'],
+                explanation=data['explanation'],
+                examples=data['examples']
+            )
+            flashcards.append(flashcard)
+
+        return flashcards
+
+    def get_ready_flashcards(self, user_id: int) -> FlashcardContainer:
+        flashcards = self._get_flashcards(
+            request=(
+                f'WHERE user_id = :user_id AND '
+                f'datetime(review_timestamp, "localtime") <= :now '
+                f'ORDER BY datetime(review_timestamp, "localtime")'
+            ),
+            request_params={
+                'user_id': user_id,
+                'now': datetime_now()
+            }
+        )
+
+        flashcard_container = FlashcardContainer()
         group_by_date = groupby(
             flashcards,
             key=lambda f: f['review_timestamp'].date()
@@ -219,48 +298,105 @@ class DBSession:
         for date, data in group_by_date:
             flashcards_by_date = list(data)
             random.shuffle(flashcards_by_date)
-            shuffled_flashcards.extend(flashcards_by_date)
-            
-        return shuffled_flashcards
+            flashcard_container.extend(flashcards_by_date)
+
+        return flashcard_container
 
     def add_flashcard(self, flashcard: Flashcard) -> None:
         with self.db_conn:
-            data = flashcard.to_dict_on_saving()
-
-            # Convert timestamps to UTC.
-            data['review_timestamp'] = datetime_change_timezone(
-                data['review_timestamp'], offset=0
-            )
-            data['created'] = datetime_change_timezone(
-                data['created'], offset=0
-            )
-
             self.db_cursor.execute(
-                'INSERT INTO flashcards'
-                '(user_id, side_question, side_answer, review_timestamp,'
-                'source, explanation, examples, phonetic_transcriptions, '
-                'created, state) '
-                'VALUES (:user_id, :side_question, :side_answer, '
-                ':review_timestamp, :source, :explanation, :examples, '
-                ':phonetic_transcriptions, :created, :state) ',
-                data
+                'INSERT INTO flashcards('
+                '    user_id, '
+                '    side_question, '
+                '    side_answer, '
+                '    review_timestamp, '
+                '    source, '
+                '    explanation, '
+                '    phonetic_transcriptions, '
+                '    created, '
+                '    state'
+                ') '
+                'VALUES ('
+                '    :user_id, '
+                '    :question, '
+                '    :answer, '
+                '    :review_timestamp, '
+                '    :source, '
+                '    :explanation, '
+                '    :phonetic_transcriptions, '
+                '    :created, '
+                '    :state'
+                ') ',
+                {
+                    'user_id': flashcard.user_id,
+                    'question': flashcard.question,
+                    'answer': flashcard.answer,
+                    'review_timestamp': datetime_change_timezone(
+                        flashcard.review_timestamp, offset=0
+                    ),
+                    'source': flashcard.source,
+                    'explanation': flashcard.explanation,
+                    'phonetic_transcriptions': flashcard.phonetic_transcription,
+                    'created': datetime_change_timezone(
+                        flashcard.created, offset=0
+                    ),
+                    'state': flashcard.state,
+                }
             )
+            flashcard.flashcard_id = self.db_cursor.lastrowid
+
+            for example in flashcard.examples:
+                self.db_cursor.execute(
+                    'INSERT INTO flashcard_example(flashcard_id, example)'
+                    'VALUES (:flashcard_id, :example)',
+                    {
+                        'flashcard_id': flashcard.id,
+                        'example': example
+                    }
+                )
 
     def update_flashcard(self, flashcard: Flashcard) -> None:
         with self.db_conn:
             self.db_cursor.execute(
-                'UPDATE flashcards '
-                'SET side_question=:side_question, side_answer=:side_answer, '
-                'source=:source, explanation=:explanation, examples=:examples, '
-                'phonetic_transcriptions=:phonetic_transcriptions '
+                'UPDATE flashcards SET '
+                '   side_question=:question, '
+                '   side_answer=:answer, '
+                '   source=:source, '
+                '   explanation=:explanation, '
+                '   phonetic_transcriptions=:phonetic_transcriptions '
                 'WHERE id=:flashcard_id',
-                flashcard.to_dict_on_updating()
+                {
+                    'flashcard_id': flashcard.flashcard_id,
+                    'question': flashcard.question,
+                    'answer': flashcard.answer,
+                    'source': flashcard.source,
+                    'explanation': flashcard.explanation,
+                    'phonetic_transcriptions': flashcard.phonetic_transcription
+                }
             )
+            self.db_cursor.execute(
+                'DELETE FROM flashcard_example '
+                'WHERE flashcard_id=:flashcard_id',
+                {
+                    'flashcard_id': flashcard.flashcard_id
+                }
+            )
+            for example in flashcard.examples:
+                self.db_cursor.execute(
+                    'INSERT INTO flashcard_example(flashcard_id, example)'
+                    'VALUES (:flashcard_id, :example)',
+                    {
+                        'flashcard_id': flashcard.id,
+                        'example': example
+                    }
+                )
 
     def delete_flashcard(self, flashcard: Flashcard) -> None:
         with self.db_conn:
             self.db_cursor.executescript(f"""
                 DELETE FROM flashcard_states 
+                WHERE flashcard_id={flashcard.flashcard_id};
+                DELETE FROM flashcard_example
                 WHERE flashcard_id={flashcard.flashcard_id};
                 DELETE FROM flashcards
                 WHERE id={flashcard.flashcard_id};
@@ -269,8 +405,9 @@ class DBSession:
     def update_flashcard_state(self, flashcard: Flashcard) -> None:
         with self.db_conn:
             self.db_cursor.execute(
-                'UPDATE flashcards '
-                'SET review_timestamp=:review_timestamp, state=:state '
+                'UPDATE flashcards SET '
+                '   review_timestamp=:review_timestamp, '
+                '   state=:state '
                 'WHERE id=:flashcard_id',
                 {
                     'flashcard_id': flashcard.flashcard_id,
@@ -303,25 +440,13 @@ class DBSession:
                 else:
                     flashcard_ids = str(flashcard_ids)
 
-                query = (
-                    f'select '
-                    f'id as flashcard_id, user_id, side_question, side_answer, '
-                    f'review_timestamp, source, explanation, examples, '
-                    f'phonetic_transcriptions, created, state '
-                    f'from flashcards '
-                    f'where id in {flashcard_ids} and '
-                    f'user_id = {user_id}'
+                flashcards = self._get_flashcards(
+                    request=(
+                        f'where id in {flashcard_ids} and '
+                        f'user_id = {user_id}'
+                    )
                 )
-                query = self.db_cursor.execute(query)
-                for row in query:
-                    flashcard = dict(row)
-                    flashcard['review_timestamp'] = convert_datetime_to_local(
-                        row['review_timestamp']
-                    )
-                    flashcard['created'] = convert_datetime_to_local(
-                        row['created']
-                    )
-                    flashcard_container.add(Flashcard(**flashcard))
+                flashcard_container.extend(flashcards)
 
         return flashcard_container
 
@@ -356,16 +481,6 @@ class DBSession:
                     {'key': now, 'value': 0}
                 )
         return data
-
-    def get_flashcard_source_tags(self, user_id):
-        query = self.db_cursor.execute(
-            'SELECT distinct(source) as tag '
-            'FROM flashcards '
-            'WHERE user_id = :user_id '
-            'ORDER BY id desc;',
-            {'user_id': user_id}
-        )
-        return [row['tag'] for row in query]
 
     def get_source_tags(self, user_id):
         query = self.db_cursor.execute(
