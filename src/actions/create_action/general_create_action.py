@@ -87,6 +87,7 @@ class GeneralCreateAction(AbstractBaseAction):
 
         flashcard: Flashcard = Flashcard.create(
             user_id=self.mediator.get_user_id(),
+            flashcard_type=self.mediator.name(),
             question=question,
             answer=answer,
             source=source

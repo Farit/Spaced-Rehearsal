@@ -24,6 +24,7 @@ class Mediator:
         self.config = ConfigAdapter(filename='config.cfg')
         self.db_session = DBSession(
             self.config['database'].get('name'),
+            flashcard_type=self.name(),
             setup_db=True
         )
         self.review_action = self.make_review_action()

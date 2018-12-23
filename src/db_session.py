@@ -40,7 +40,8 @@ class DBSession:
 
         return getattr(cls, '_instances')[database]
 
-    def __init__(self, database, *, setup_db=False):
+    def __init__(self, database, *, flashcard_type, setup_db=False):
+        self.flashcard_type = normalize_value(flashcard_type, to_lower=True)
         self.register_flashcard_state_adapter()
         self.db_conn = sqlite3.connect(
             database, detect_types=sqlite3.PARSE_DECLTYPES
@@ -193,16 +194,25 @@ class DBSession:
             query = self.db_cursor.execute(
                 'SELECT count(*) '
                 'FROM flashcards '
-                'WHERE user_id = ?',
-                (user_id,)
+                'WHERE user_id = :user_id AND '
+                '      flashcard_type = :flashcard_type; ',
+                {
+                    'user_id': user_id,
+                    'flashcard_type': self.flashcard_type
+                }
             )
         else:
             query = self.db_cursor.execute(
                 'SELECT count(*) '
                 'FROM flashcards '
-                'WHERE user_id = ? AND '
-                'datetime(review_timestamp, "localtime") <= ?',
-                (user_id, review_timestamp)
+                'WHERE user_id = :user_id AND '
+                '      flashcard_type = :flashcard_type AND '
+                '      datetime(review_timestamp, "localtime") <= :review',
+                {
+                    'user_id': user_id,
+                    'flashcard_type': self.flashcard_type,
+                    'review': review_timestamp
+                }
             )
         return query.fetchone()['count(*)']
 
@@ -214,6 +224,7 @@ class DBSession:
         query = self.db_cursor.execute(
             f'SELECT '
             f'    id as flashcard_id, '
+            f'    flashcard_type, '
             f'    user_id, '
             f'    question, '
             f'    answer, '
@@ -257,6 +268,7 @@ class DBSession:
             )
             flashcard = Flashcard(
                 user_id=data['user_id'],
+                flashcard_type=data['flashcard_type'],
                 question=data['question'],
                 answer=data['answer'],
                 created=convert_datetime_to_local(data['created']),
@@ -281,10 +293,12 @@ class DBSession:
         flashcards = self._get_flashcards(
             request=(
                 f'WHERE user_id = :user_id AND '
-                f'datetime(review_timestamp, "localtime") <= :now '
+                f'      flashcard_type = :flashcard_type AND '
+                f'      datetime(review_timestamp, "localtime") <= :now '
                 f'ORDER BY datetime(review_timestamp, "localtime")'
             ),
             request_params={
+                'flashcard_type': self.flashcard_type,
                 'user_id': user_id,
                 'now': datetime_now()
             }
@@ -306,6 +320,7 @@ class DBSession:
         with self.db_conn:
             self.db_cursor.execute(
                 'INSERT INTO flashcards('
+                '    flashcard_type, '
                 '    user_id, '
                 '    question, '
                 '    answer, '
@@ -317,6 +332,7 @@ class DBSession:
                 '    state'
                 ') '
                 'VALUES ('
+                '    :flashcard_type, '
                 '    :user_id, '
                 '    :question, '
                 '    :answer, '
@@ -328,6 +344,7 @@ class DBSession:
                 '    :state'
                 ') ',
                 {
+                    'flashcard_type': flashcard.flashcard_type,
                     'user_id': flashcard.user_id,
                     'question': flashcard.question,
                     'answer': flashcard.answer,
@@ -442,9 +459,14 @@ class DBSession:
 
                 flashcards = self._get_flashcards(
                     request=(
-                        f'where id in {flashcard_ids} and '
-                        f'user_id = {user_id}'
-                    )
+                        f'where id in {flashcard_ids} AND '
+                        f'      user_id = :user_id AND '
+                        f'      flashcard_type = :flashcard_type '
+                    ),
+                    request_params={
+                        'user_id': user_id,
+                        'flashcard_type': self.flashcard_type
+                    }
                 )
                 flashcard_container.extend(flashcards)
 
@@ -452,13 +474,17 @@ class DBSession:
 
     def get_vis_by_date(self, user_id):
         query = self.db_cursor.execute(
-            'SELECT strftime("%Y-%m-%d", review_timestamp, "localtime") as key,'
-            ' count(*) as value '
+            'SELECT '
+            '   strftime("%Y-%m-%d", review_timestamp, "localtime") as key, '
+            '   count(*) as value '
             'FROM flashcards '
-            'WHERE user_id = ? '
+            'WHERE user_id = :user_id and flashcard_type = :flashcard_type '
             'GROUP BY strftime("%Y-%m-%d", review_timestamp, "localtime") '
             'ORDER BY strftime("%Y-%m-%d", review_timestamp, "localtime");',
-            (user_id, )
+            {
+                'user_id': user_id,
+                'flashcard_type': self.flashcard_type
+            }
         )
         data = []
         dates = []
@@ -486,9 +512,12 @@ class DBSession:
         query = self.db_cursor.execute(
             'SELECT distinct(source) as tag '
             'FROM flashcards '
-            'WHERE user_id = :user_id '
+            'WHERE user_id = :user_id and flashcard_type = :flashcard_type '
             'ORDER BY created desc;',
-            {'user_id': user_id}
+            {
+                'user_id': user_id,
+                'flashcard_type': self.flashcard_type
+            }
         )
         source_tags = []
         for row in query:

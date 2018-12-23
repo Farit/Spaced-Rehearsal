@@ -15,9 +15,12 @@ from web_app.handlers import default
 
 class Application:
 
-    def __init__(self):
+    def __init__(self, flashcard_type):
         self.config = ConfigAdapter(filename='config.cfg')
-        self.db_session = DBSession(self.config['database'].get('name'))
+        self.db_session = DBSession(
+            self.config['database'].get('name'),
+            flashcard_type=flashcard_type
+        )
 
         self.address = self.config['server'].get('host')
         self.port = self.config['server'].getint('port')

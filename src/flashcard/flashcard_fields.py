@@ -28,6 +28,19 @@ class Field:
         instance.__dict__[self.attr_name] = value
 
 
+class FlashcardType(Field):
+    def __init__(self, attr_name='flashcard_type', print_name='Type'):
+        super().__init__(attr_name=attr_name, print_name=print_name)
+
+    def __set__(self, instance, value):
+        if not isinstance(value, str):
+            err_msg = f'{self.attr_name}: {value!r} must be string.'
+            raise TypeError(err_msg)
+
+        value = normalize_value(value, to_lower=True)
+        super().__set__(instance, value)
+
+
 class UserId(Field):
 
     def __init__(self, attr_name='user_id', print_name='User id'):

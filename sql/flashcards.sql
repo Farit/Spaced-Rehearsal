@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS flashcards(
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    flashcard_type CHARACTER VARYING(2048) NOT NULL,
     question TEXT NOT NULL,
     answer TEXT NOT NULL,
     phonetic_transcription TEXT,

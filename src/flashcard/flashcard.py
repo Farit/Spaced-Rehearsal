@@ -7,7 +7,7 @@ from typing import Optional, List
 from src.utils import datetime_now
 from src.flashcard.flashcard_fields import (
     UserId, FlashcardId, Question, Answer, PhoneticTranscription, Source,
-    Explanation, Examples, Created, ReviewTimestamp, State
+    Explanation, Examples, Created, ReviewTimestamp, State, FlashcardType
 )
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
 from src.flashcard.flashcard_state import FlashcardState
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Flashcard:
     user_id = UserId()
+    flashcard_type = FlashcardType()
     flashcard_id = FlashcardId()
     question = Question()
     answer = Answer()
@@ -31,6 +32,7 @@ class Flashcard:
     def __init__(
             self, *,
             user_id: int,
+            flashcard_type: str,
             question: str=None,
             answer: str=None,
             created: datetime,
@@ -43,6 +45,7 @@ class Flashcard:
             examples: Optional[list]=None,
     ):
         self.user_id = user_id
+        self.flashcard_type = flashcard_type
         self.question = question
         self.answer = answer
         self.created = created
@@ -57,7 +60,7 @@ class Flashcard:
 
     @classmethod
     def create(
-        cls, *, user_id: int, question: str, answer: str,
+        cls, *, user_id: int, flashcard_type: str, question: str, answer: str,
         phonetic_transcription: str=None, source: str=None,
         explanation: str=None, examples: List[str]=None
     ):
@@ -68,6 +71,7 @@ class Flashcard:
 
         flashcard = cls(
             user_id=user_id,
+            flashcard_type=flashcard_type,
             question=question,
             answer=answer,
             created=datetime_now(),
@@ -147,6 +151,7 @@ class Flashcard:
     def __iter__(self):
         return iter([
             ('flashcard_id', self.flashcard_id),
+            ('flashcard_type', self.flashcard_type),
             ('user_id', self.user_id),
             ('question', self.question),
             ('answer', self.answer),

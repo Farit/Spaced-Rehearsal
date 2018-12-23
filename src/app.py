@@ -15,7 +15,7 @@ class SpacedRehearsal:
     def __init__(self, mediator):
         self.loop = asyncio.get_event_loop()
         self.mediator = mediator
-        self.web_app = WebApp()
+        self.web_app = WebApp(flashcard_type=self.mediator.name())
         self.set_signal_handler('sigint')
         self.set_signal_handler('sigterm')
 
