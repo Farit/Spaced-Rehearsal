@@ -2,6 +2,7 @@ import enum
 import logging
 import json
 import string
+import socket
 import os
 
 from tornado.httpclient import (
@@ -27,9 +28,12 @@ class Dictionary:
         for word in text.split():
             normalized_word = self._normalize_word(word)
             if normalized_word not in spellings:
-                spelling = await self.get_word_phonetic_spelling(
-                    normalized_word
-                )
+                try:
+                    spelling = await self.get_word_phonetic_spelling(
+                        normalized_word
+                    )
+                except socket.gaierror:
+                    spelling = None
                 spellings[normalized_word] = f'/{spelling}/'
 
             result.append((normalized_word, spellings[normalized_word]))
