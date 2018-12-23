@@ -215,12 +215,12 @@ class DBSession:
             f'SELECT '
             f'    id as flashcard_id, '
             f'    user_id, '
-            f'    side_question, '
-            f'    side_answer, '
+            f'    question, '
+            f'    answer, '
             f'    review_timestamp, '
             f'    source, '
             f'    explanation, '
-            f'    phonetic_transcriptions, '
+            f'    phonetic_transcription, '
             f'    created, '
             f'    state '
             f'FROM flashcards '
@@ -257,8 +257,8 @@ class DBSession:
             )
             flashcard = Flashcard(
                 user_id=data['user_id'],
-                question=data['side_question'],
-                answer=data['side_answer'],
+                question=data['question'],
+                answer=data['answer'],
                 created=convert_datetime_to_local(data['created']),
                 state=FlashcardState(
                     state=state, answer_difficulty=answer_difficulty,
@@ -268,7 +268,7 @@ class DBSession:
                     data['review_timestamp']
                 ),
                 flashcard_id=data['flashcard_id'],
-                phonetic_transcription=data['phonetic_transcriptions'],
+                phonetic_transcription=data['phonetic_transcription'],
                 source=data['source'],
                 explanation=data['explanation'],
                 examples=data['examples']
@@ -307,12 +307,12 @@ class DBSession:
             self.db_cursor.execute(
                 'INSERT INTO flashcards('
                 '    user_id, '
-                '    side_question, '
-                '    side_answer, '
+                '    question, '
+                '    answer, '
                 '    review_timestamp, '
                 '    source, '
                 '    explanation, '
-                '    phonetic_transcriptions, '
+                '    phonetic_transcription, '
                 '    created, '
                 '    state'
                 ') '
@@ -323,7 +323,7 @@ class DBSession:
                 '    :review_timestamp, '
                 '    :source, '
                 '    :explanation, '
-                '    :phonetic_transcriptions, '
+                '    :phonetic_transcription, '
                 '    :created, '
                 '    :state'
                 ') ',
@@ -336,7 +336,7 @@ class DBSession:
                     ),
                     'source': flashcard.source,
                     'explanation': flashcard.explanation,
-                    'phonetic_transcriptions': flashcard.phonetic_transcription,
+                    'phonetic_transcription': flashcard.phonetic_transcription,
                     'created': datetime_change_timezone(
                         flashcard.created, offset=0
                     ),
@@ -359,11 +359,11 @@ class DBSession:
         with self.db_conn:
             self.db_cursor.execute(
                 'UPDATE flashcards SET '
-                '   side_question=:question, '
-                '   side_answer=:answer, '
+                '   question=:question, '
+                '   answer=:answer, '
                 '   source=:source, '
                 '   explanation=:explanation, '
-                '   phonetic_transcriptions=:phonetic_transcriptions '
+                '   phonetic_transcription=:phonetic_transcription '
                 'WHERE id=:flashcard_id',
                 {
                     'flashcard_id': flashcard.flashcard_id,
@@ -371,7 +371,7 @@ class DBSession:
                     'answer': flashcard.answer,
                     'source': flashcard.source,
                     'explanation': flashcard.explanation,
-                    'phonetic_transcriptions': flashcard.phonetic_transcription
+                    'phonetic_transcription': flashcard.phonetic_transcription
                 }
             )
             self.db_cursor.execute(

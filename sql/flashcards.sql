@@ -2,9 +2,9 @@
 
 CREATE TABLE IF NOT EXISTS flashcards(
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    side_question TEXT NOT NULL,
-    side_answer TEXT NOT NULL,
-    phonetic_transcriptions TEXT,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    phonetic_transcription TEXT,
     source TEXT,
     explanation TEXT,
     user_id INTEGER NOT NULL,
