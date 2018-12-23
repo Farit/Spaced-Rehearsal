@@ -1,4 +1,5 @@
 import os
+import socket
 import json
 import enum
 import logging
@@ -105,6 +106,9 @@ class IbmEngTextToSpeech:
         except HTTPError as err:
             response: HTTPResponse = err.response
             logger.exception(f'HTTP Error: {err}, response: {response.body}')
+
+        except socket.gaierror as err:
+            logger.warning(f'Socket Error: {err}')
 
         except Exception as err:
             logger.exception(f'Internal Error: {err}')
