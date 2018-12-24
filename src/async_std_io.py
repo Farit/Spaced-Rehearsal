@@ -49,6 +49,7 @@ class AsyncStdIO:
         terminal_size = shutil.get_terminal_size()
         width = terminal_size[0] - 10
         for msg in msgs:
+            msg = str(msg)
             if len(msg) > 1:
                 output_lines = textwrap.wrap(msg, width=width)
                 for ind, output_line in enumerate(output_lines):
