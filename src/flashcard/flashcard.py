@@ -7,10 +7,9 @@ from typing import Optional, List
 from src.utils import datetime_now
 from src.flashcard.flashcard_fields import (
     UserId, FlashcardId, Question, Answer, PhoneticTranscription, Source,
-    Explanation, Examples, Created, ReviewTimestamp, State, FlashcardType
+    Explanation, Examples, Created, ReviewTimestamp, FlashcardType
 )
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
-from src.flashcard.flashcard_state import FlashcardState
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,6 @@ class Flashcard:
     examples = Examples()
     created = Created()
     review_timestamp = ReviewTimestamp()
-    state = State()
 
     def __init__(
             self, *,
@@ -37,7 +35,6 @@ class Flashcard:
             answer: str=None,
             created: datetime,
             review_timestamp: datetime,
-            state: FlashcardState,
             flashcard_id: Optional[int]=None,
             phonetic_transcription: Optional[str]=None,
             source: Optional[str]=None,
@@ -50,7 +47,6 @@ class Flashcard:
         self.answer = answer
         self.created = created
         self.review_timestamp = review_timestamp
-        self.state = state
 
         self.flashcard_id = flashcard_id
         self.phonetic_transcription = phonetic_transcription
@@ -64,19 +60,13 @@ class Flashcard:
         phonetic_transcription: str=None, source: str=None,
         explanation: str=None, examples: List[str]=None
     ):
-        scheduler = FlashcardScheduler(
-            flashcard_answer_side=answer
-        )
-        scheduler.to_init()
-
         flashcard = cls(
             user_id=user_id,
             flashcard_type=flashcard_type,
             question=question,
             answer=answer,
             created=datetime_now(),
-            state=scheduler.next_state,
-            review_timestamp=scheduler.next_review_timestamp,
+            review_timestamp=FlashcardScheduler.to_init(answer),
             flashcard_id=None,
             phonetic_transcription=phonetic_transcription,
             source=source,
@@ -161,5 +151,4 @@ class Flashcard:
             ('examples', self.examples),
             ('review_timestamp', self.review_timestamp),
             ('created', self.created),
-            ('state', self.state),
         ])

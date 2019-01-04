@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from src.actions import (
     GeneralReviewAction,
     GeneralCreateAction,
@@ -94,8 +96,19 @@ class Mediator:
     async def update_flashcard(self, flashcard: Flashcard):
         self.db_session.update_flashcard(flashcard=flashcard)
 
-    async def update_flashcard_state(self, flashcard: Flashcard):
-        self.db_session.update_flashcard_state(flashcard=flashcard)
+    async def update_flashcard_review_state(
+            self,
+            flashcard_id: int,
+            current_review_timestamp: datetime,
+            current_result: str,
+            next_review_timestamp: datetime,
+    ) -> None:
+        self.db_session.update_flashcard_review_state(
+            flashcard_id=flashcard_id,
+            current_result=current_result,
+            current_review_timestamp=current_review_timestamp,
+            next_review_timestamp=next_review_timestamp,
+        )
 
     async def delete_flashcard(self, flashcard: Flashcard):
         self.db_session.delete_flashcard(flashcard=flashcard)
@@ -123,6 +136,12 @@ class Mediator:
             review_timestamp=datetime_now()
         )
         return review_number
+
+    async def get_prev_review_timestamp(self, flashcard):
+        previous_review_timestamp = self.db_session.get_prev_review_timestamp(
+            flashcard=flashcard
+        )
+        return previous_review_timestamp
 
     async def get_ready_flashcards(self) -> FlashcardContainer:
         flashcard_container: FlashcardContainer = (

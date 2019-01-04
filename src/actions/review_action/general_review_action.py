@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from src.utils import datetime_now
 from src.actions.abstract_base_action import AbstractBaseAction
 from src.flashcard import FlashcardContainer, Flashcard, FlashcardReview
 
@@ -20,6 +21,7 @@ class GeneralReviewAction(AbstractBaseAction):
         review_stat.start()
 
         try:
+            await self.mediator.print(len(flashcard_container))
             for ind, flashcard in enumerate(flashcard_container, start=1):
                 await self.mediator.print(
                     f'Flashcard[{flashcard.id}] #{ind} / #{review_stat.total}',
@@ -49,7 +51,15 @@ class GeneralReviewAction(AbstractBaseAction):
             )
 
     async def make_review(self, flashcard: Flashcard, review_stat):
-        flashcard_review = FlashcardReview(flashcard)
+        previous_review_timestamp = await self.mediator.get_prev_review_timestamp(
+            flashcard=flashcard
+        )
+        current_review_timestamp = datetime_now()
+
+        flashcard_review = FlashcardReview(
+            flashcard=flashcard,
+            previous_review_timestamp=previous_review_timestamp
+        )
 
         await self.mediator.print(
             f'{self.mediator.format_grey("Question")}: '
@@ -61,9 +71,11 @@ class GeneralReviewAction(AbstractBaseAction):
         if flashcard_review.is_success:
             review_stat.inc_right()
             colour_func = self.mediator.format_green
+            current_result = 'success'
         else:
             review_stat.inc_wrong()
             colour_func = self.mediator.format_red
+            current_result = 'failure'
 
         await self.mediator.print_flashcard(
             flashcard,
@@ -75,7 +87,12 @@ class GeneralReviewAction(AbstractBaseAction):
             bottom_margin=1
         )
 
-        await self.mediator.update_flashcard_state(flashcard)
+        await self.mediator.update_flashcard_review_state(
+            flashcard_id=flashcard.flashcard_id,
+            current_review_timestamp=current_review_timestamp,
+            current_result=current_result,
+            next_review_timestamp=flashcard.review_timestamp,
+        )
         review_stat.inc_reviewed()
 
 

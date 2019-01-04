@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 
 from src.utils import normalize_value
-from src.flashcard.flashcard_state import FlashcardState
 
 
 logger = logging.getLogger(__name__)
@@ -177,16 +176,3 @@ class ReviewTimestamp(Field):
 
         super().__set__(instance, value)
 
-
-class State(Field):
-    def __init__(self, attr_name='state', print_name='State'):
-        super().__init__(attr_name=attr_name, print_name=print_name)
-
-    def __set__(self, instance, value):
-        if not isinstance(value, FlashcardState):
-            err_msg = (
-                f'"{self.attr_name}" field must be FlashcardState type. '
-                f'Type: {type(value)}, Value: {value!r}'
-            )
-            raise TypeError(err_msg)
-        super().__set__(instance, value)

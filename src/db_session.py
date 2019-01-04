@@ -1,4 +1,3 @@
-import re
 import bisect
 import random
 import sqlite3
@@ -8,7 +7,7 @@ from datetime import datetime
 from itertools import groupby
 from typing import List
 
-from src.flashcard import Flashcard, FlashcardContainer, FlashcardState
+from src.flashcard import Flashcard, FlashcardContainer
 from src.utils import (
     datetime_now,
     datetime_change_timezone,
@@ -42,7 +41,6 @@ class DBSession:
 
     def __init__(self, database, *, flashcard_type, setup_db=False):
         self.flashcard_type = normalize_value(flashcard_type, to_lower=True)
-        self.register_flashcard_state_adapter()
         self.db_conn = sqlite3.connect(
             database, detect_types=sqlite3.PARSE_DECLTYPES
         )
@@ -52,10 +50,10 @@ class DBSession:
             self.setup_users_table()
             self.setup_flashcards_table()
             self.setup_flashcard_example_table()
-            self.setup_flashcard_states_table()
-            self.setup_trigger_log_update_flashcard_state()
-            self.setup_trigger_log_insert_flashcard_state()
+            self.setup_flashcard_review_history_table()
             self.setup_full_text_search()
+
+        self.db_conn.set_trace_callback(self.trace_callback)
 
     def __str__(self):
         return '<{0}[conn:{1}]>'.format(
@@ -66,17 +64,9 @@ class DBSession:
     def close(self):
         self.db_cursor.close()
         self.db_conn.close()
-
-    @staticmethod
-    def register_flashcard_state_adapter():
-        def adapt_flashcard_state(flashcard_state: FlashcardState):
-            return (
-                f"{flashcard_state.state};"
-                f"{flashcard_state.answer_difficulty};"
-                f"{flashcard_state.delay};"
-                f"{flashcard_state.mem_strength}"
-            )
-        sqlite3.register_adapter(FlashcardState, adapt_flashcard_state)
+        
+    def trace_callback(self, statement):
+        logger.info(f'SQL: {statement}')
 
     def setup_users_table(self):
         self.db_cursor.execute("""
@@ -117,43 +107,17 @@ class DBSession:
             self.db_cursor.execute(flashcard_example_table)
             self.db_conn.commit()
 
-    def setup_flashcard_states_table(self):
+    def setup_flashcard_review_history_table(self):
         self.db_cursor.execute("""
             SELECT name
             FROM sqlite_master
-            WHERE type='table' AND name='flashcard_states';
+            WHERE type='table' AND name='flashcard_review_history';
         """)
-        flashcard_states_table = self.db_cursor.fetchone()
-        if flashcard_states_table is None:
-            with open('sql/flashcard_states.sql') as fh:
-                flashcard_states_table = fh.read()
-            self.db_cursor.execute(flashcard_states_table)
-            self.db_conn.commit()
-
-    def setup_trigger_log_update_flashcard_state(self):
-        self.db_cursor.execute("""
-            SELECT name
-            FROM sqlite_master
-            WHERE type='trigger' AND name = 'log_update_flashcard_state';
-        """)
-        trigger_log_update_flashcard_state = self.db_cursor.fetchone()
-        if trigger_log_update_flashcard_state is None:
-            with open('sql/trigger_log_update_flashcard_state.sql') as fh:
-                trigger_log_update_flashcard_state = fh.read()
-            self.db_cursor.execute(trigger_log_update_flashcard_state)
-            self.db_conn.commit()
-
-    def setup_trigger_log_insert_flashcard_state(self):
-        self.db_cursor.execute("""
-            SELECT name
-            FROM sqlite_master
-            WHERE type='trigger' AND name = 'log_insert_flashcard_state';
-        """)
-        trigger_log_insert_flashcard_state = self.db_cursor.fetchone()
-        if trigger_log_insert_flashcard_state is None:
-            with open('sql/trigger_log_insert_flashcard_state.sql') as fh:
-                trigger_log_insert_flashcard_state = fh.read()
-            self.db_cursor.execute(trigger_log_insert_flashcard_state)
+        flashcard_review_history_table = self.db_cursor.fetchone()
+        if flashcard_review_history_table is None:
+            with open('sql/flashcard_review_history.sql') as fh:
+                flashcard_review_history_table = fh.read()
+            self.db_cursor.execute(flashcard_review_history_table)
             self.db_conn.commit()
 
     def setup_full_text_search(self):
@@ -232,14 +196,13 @@ class DBSession:
             f'    source, '
             f'    explanation, '
             f'    phonetic_transcription, '
-            f'    created, '
-            f'    state '
+            f'    created '
             f'FROM flashcards '
             f'{request}',
             request_params
         )
         flashcards = []
-        for row in query:
+        for row in query.fetchall():
             data = dict(row)
             examples = self.db_cursor.execute(
                 'SELECT example '
@@ -249,33 +212,12 @@ class DBSession:
             )
             data['examples'] = [r['example'] for r in examples]
 
-            state_match = re.match(
-                r'''
-                    ^(?P<state>.+);
-                    (?P<answer_difficulty>.+);
-                    (?P<delay>.+);
-                    (?P<mem_strength>.+)$
-                ''',
-                data['state'],
-                flags=re.VERBOSE
-            )
-            state = state_match.group('state')
-            answer_difficulty = float(state_match.group('answer_difficulty'))
-            delay = int(state_match.group('delay'))
-            mem_strength = state_match.group('mem_strength')
-            mem_strength = (
-                int(mem_strength) if mem_strength != 'None' else None
-            )
             flashcard = Flashcard(
                 user_id=data['user_id'],
                 flashcard_type=data['flashcard_type'],
                 question=data['question'],
                 answer=data['answer'],
                 created=convert_datetime_to_local(data['created']),
-                state=FlashcardState(
-                    state=state, answer_difficulty=answer_difficulty,
-                    delay=delay, mem_strength=mem_strength
-                ),
                 review_timestamp=convert_datetime_to_local(
                     data['review_timestamp']
                 ),
@@ -328,8 +270,7 @@ class DBSession:
                 '    source, '
                 '    explanation, '
                 '    phonetic_transcription, '
-                '    created, '
-                '    state'
+                '    created '
                 ') '
                 'VALUES ('
                 '    :flashcard_type, '
@@ -340,8 +281,7 @@ class DBSession:
                 '    :source, '
                 '    :explanation, '
                 '    :phonetic_transcription, '
-                '    :created, '
-                '    :state'
+                '    :created '
                 ') ',
                 {
                     'flashcard_type': flashcard.flashcard_type,
@@ -356,8 +296,7 @@ class DBSession:
                     'phonetic_transcription': flashcard.phonetic_transcription,
                     'created': datetime_change_timezone(
                         flashcard.created, offset=0
-                    ),
-                    'state': flashcard.state,
+                    )
                 }
             )
             flashcard.flashcard_id = self.db_cursor.lastrowid
@@ -411,7 +350,7 @@ class DBSession:
     def delete_flashcard(self, flashcard: Flashcard) -> None:
         with self.db_conn:
             self.db_cursor.executescript(f"""
-                DELETE FROM flashcard_states 
+                DELETE FROM flashcard_review_history 
                 WHERE flashcard_id={flashcard.flashcard_id};
                 DELETE FROM flashcard_example
                 WHERE flashcard_id={flashcard.flashcard_id};
@@ -419,19 +358,38 @@ class DBSession:
                 WHERE id={flashcard.flashcard_id};
             """)
 
-    def update_flashcard_state(self, flashcard: Flashcard) -> None:
+    def update_flashcard_review_state(
+            self,
+            flashcard_id: int,
+            current_review_timestamp: datetime,
+            current_result: str,
+            next_review_timestamp: datetime,
+    ) -> None:
         with self.db_conn:
             self.db_cursor.execute(
                 'UPDATE flashcards SET '
-                '   review_timestamp=:review_timestamp, '
-                '   state=:state '
+                '   review_timestamp=:review_timestamp '
                 'WHERE id=:flashcard_id',
                 {
-                    'flashcard_id': flashcard.flashcard_id,
+                    'flashcard_id': flashcard_id,
                     'review_timestamp': datetime_change_timezone(
-                        flashcard.review_timestamp, offset=0
+                        next_review_timestamp, offset=0
+                    )
+                }
+            )
+            self.db_cursor.execute(
+                'INSERT INTO flashcard_review_history('
+                '   flashcard_id,'
+                '   review_timestamp, '
+                '   result'
+                ') '
+                'VALUES (:flashcard_id, :review_timestamp, :result)',
+                {
+                    'flashcard_id': flashcard_id,
+                    'review_timestamp': datetime_change_timezone(
+                        current_review_timestamp, offset=0
                     ),
-                    'state': flashcard.state
+                    'result': current_result
                 }
             )
 
@@ -527,3 +485,22 @@ class DBSession:
                 source_tags.append(tag.capitalize() + '.')
 
         return source_tags
+
+    def get_prev_review_timestamp(self, flashcard):
+        query = self.db_cursor.execute(
+            'SELECT * '
+            'FROM flashcard_review_history '
+            'WHERE flashcard_id = :flashcard_id '
+            'ORDER BY review_timestamp desc',
+            {
+                'flashcard_id': flashcard.flashcard_id,
+            }
+        )
+        row = query.fetchone()
+        if row:
+            previous_review_timestamp = convert_datetime_to_local(
+                row['review_timestamp']
+            )
+        else:
+            previous_review_timestamp = flashcard.created
+        return previous_review_timestamp

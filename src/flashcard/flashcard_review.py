@@ -1,5 +1,7 @@
 import logging
 
+from datetime import datetime
+
 from src.utils import normalize_value
 from src.flashcard.flashcard import Flashcard
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
@@ -10,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 class FlashcardReview:
 
-    def __init__(self, flashcard: Flashcard):
+    def __init__(
+            self,
+            flashcard: Flashcard,
+            previous_review_timestamp: datetime
+    ):
         self.flashcard = flashcard
+        self.previous_review_timestamp = previous_review_timestamp
         self.is_success = None
-        self.scheduler: FlashcardScheduler = FlashcardScheduler(
-            flashcard_answer_side=flashcard.answer,
-            current_state=flashcard.state,
-            current_review_timestamp=flashcard.review_timestamp
-        )
 
     def make(self, entered_answer):
         entered_answer = normalize_value(
@@ -29,10 +31,12 @@ class FlashcardReview:
  
         if entered_answer == flashcard_side_answer:
             self.is_success = True
-            self.scheduler.to_success()
+            self.flashcard.review_timestamp = FlashcardScheduler.to_next(
+                flashcard_answer=self.flashcard.answer,
+                previous_review_timestamp=self.previous_review_timestamp
+            )
         else:
             self.is_success = False
-            self.scheduler.to_failure()
-
-        self.flashcard.state = self.scheduler.next_state
-        self.flashcard.review_timestamp = self.scheduler.next_review_timestamp
+            self.flashcard.review_timestamp = FlashcardScheduler.to_init(
+                flashcard_answer=self.flashcard.answer
+            )
