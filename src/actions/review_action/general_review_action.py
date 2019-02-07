@@ -23,16 +23,10 @@ class GeneralReviewAction(AbstractBaseAction):
         try:
             await self.mediator.print(len(flashcard_container))
             for ind, flashcard in enumerate(flashcard_container, start=1):
-                await self.mediator.print(
-                    f'Flashcard[{flashcard.id}] #{ind} / #{review_stat.total}',
-                    bold=True
+                can_continue = await self.process_flashcard(
+                    ind, flashcard, review_stat
                 )
-                await self.make_review(flashcard, review_stat)
-
-                confirmed: bool = await self.mediator.input_confirmation(
-                    'Do you want to continue?'
-                )
-                if not confirmed:
+                if not can_continue:
                     break
 
         finally:
@@ -49,6 +43,20 @@ class GeneralReviewAction(AbstractBaseAction):
                 f'{"Wrong".ljust(12)}: {str(review_stat.wrong).rjust(6)}',
                 bottom_margin=1
             )
+
+    async def process_flashcard(self, counter, flashcard: Flashcard, review_stat):
+        await self.mediator.print(
+            f'Flashcard[{flashcard.id}] #{counter} / #{review_stat.total}',
+            bold=True
+        )
+        await self.make_review(flashcard, review_stat)
+
+        confirmed: bool = await self.mediator.input_confirmation(
+            'Do you want to continue?'
+        )
+        if not confirmed:
+            return False
+        return True
 
     async def make_review(self, flashcard: Flashcard, review_stat):
         previous_review_timestamp = await self.mediator.get_prev_review_timestamp(
