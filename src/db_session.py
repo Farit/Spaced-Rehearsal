@@ -53,7 +53,7 @@ class DBSession:
             self.setup_flashcard_review_history_table()
             self.setup_full_text_search()
 
-        self.db_conn.set_trace_callback(self.trace_callback)
+        #self.db_conn.set_trace_callback(self.trace_callback)
 
     def __str__(self):
         return '<{0}[conn:{1}]>'.format(
