@@ -1,8 +1,10 @@
 import re
+import sys
 import time
 import math
 import datetime
 import string
+import logging
 
 
 def datetime_now():
@@ -69,6 +71,18 @@ def get_human_readable_file_size(size_bytes):
     return f"{s} {size_name[i]}"
 
 
+class StreamStdOutHandler(logging.StreamHandler):
+    def __init__(self):
+        super().__init__(stream=sys.stdout)
+        self.addFilter(lambda record: record.levelno < logging.WARN)
+
+
+class StreamStdErrorHandler(logging.StreamHandler):
+    def __init__(self):
+        super().__init__(stream=sys.stderr)
+        self.addFilter(lambda record: record.levelno >= logging.WARN)
+
+
 # The dictionary of base configuration information.
 # Clients may add additional information or overwrite existing one before
 # passing it to the logging.config.dictConfig() function
@@ -88,6 +102,11 @@ log_config_as_dict = {
                 '%(levelname)s# %(name)s:: %(message)s'
             ),
         },
+        'simple': {
+            'format': (
+                '[%(asctime)s] %(levelname)s# %(message)s'
+            ),
+        },
         'precise': {
             'format': (
                 '[%(asctime)s] [%(process)d:%(threadName)s] [%(levelname)s] '
@@ -97,6 +116,24 @@ log_config_as_dict = {
         }
     },
     'handlers': {
+        'console_stdout_default': {
+            '()': StreamStdOutHandler,
+            'formatter': 'default',
+            'level': 'DEBUG'
+        },
+        'console_stderr_default': {
+            '()': StreamStdErrorHandler,
+            'formatter': 'default',
+        },
+        'console_stdout_simple': {
+            '()': StreamStdOutHandler,
+            'formatter': 'simple',
+            'level': 'DEBUG'
+        },
+        'console_stderr_simple': {
+            '()': StreamStdErrorHandler,
+            'formatter': 'simple',
+        },
         'file': {
             'class': 'logging.FileHandler',
             'level': 'DEBUG',
