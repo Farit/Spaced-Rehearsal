@@ -17,6 +17,6 @@ Required python version is >= 3.6.
 
 You start the program by following command:
    ```
-   python3.6 run.py
+   python3.6 run.py --mediator english
    ```
 
