@@ -66,6 +66,24 @@ class CreateInBulk:
                         'error': f'compound answer'
                     })
                     continue
+
+                duplicates = await mediator.search_flashcard(
+                    datum['answer']
+                )
+                duplicate = None
+                for f in duplicates:
+                    if f['question'] == datum['question']:
+                        duplicate = f
+                        break
+
+                if duplicate is not None:
+                    logger.error('Duplicate')
+                    self.errors.append({
+                        'flashcard': datum,
+                        'error': f'duplicate, flashcard_id: {duplicate.id}'
+                    })
+                    continue
+                    
                 
                 dictionary_inf = await mediator.dictionary.get_information(
                     word=datum['answer']
