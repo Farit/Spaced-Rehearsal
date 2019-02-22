@@ -45,7 +45,7 @@ class TextToSpeech:
     async def synthesize_audio(self, text):
         audio_file = None
         log_prefix_msg = (
-            f'Synthesize audio for text={text}.'
+            f'Synthesize audio for text={text}. '
             f'lang={self.lang.value}.'
         )
         if self.lang == self.Lang.ENG:
