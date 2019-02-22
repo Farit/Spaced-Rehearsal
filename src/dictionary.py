@@ -40,6 +40,17 @@ class Dictionary:
 
         return '   '.join(f'{word}: {spelling}' for word, spelling in result)
 
+    async def get_information(self, word):
+        information = {}
+
+        if self.lang == self.Lang.ENG:
+            information = await self.oxford_eng_dict.get_info(word)
+
+        if information.get('spelling'):
+            information['spelling'] = f'{word}: /{information["spelling"]}/'
+
+        return information
+
     async def get_word_phonetic_spelling(self, word):
         spelling = None
         log_prefix_msg = (
@@ -101,6 +112,29 @@ class OxfordEngDictionary:
             bool(self.app_key) and
             bool(self.api_base_url)
         )
+
+    async def get_info(self, word):
+        information = {}
+        try:
+            url = f'{self.api_base_url}/entries/{self.source_lang}/{word}'
+            http_request = HTTPRequest(
+                url,
+                method='GET',
+                headers={
+                    'app_id': self.app_id,
+                    'app_key': self.app_key
+                }
+            )
+            response = await self._make_request(http_request)
+            lexical_entries = response['results'][0]['lexicalEntries']
+            pronunciations = lexical_entries[0]['pronunciations']
+            information['spelling'] = pronunciations[0]['phoneticSpelling']
+            information['audio_file'] = pronunciations[0]['audioFile']
+
+        except Exception as err:
+            logger.exception(err)
+
+        return information
 
     async def get_word_phonetic_spelling(self, word, is_lemmatize=False):
         logger.info(
