@@ -34,10 +34,11 @@ logger = logging.getLogger(__name__)
 
 class CreateInBulk:
 
-    def __init__(self, loop, file_path, user, mediator_name):
+    def __init__(self, loop, file_path, user, count, mediator_name):
         self.loop = loop
         self.file_path = file_path
         self.user = user
+        self.count = count
         self.mediator_name = mediator_name
         self.errors = []
 
@@ -54,7 +55,12 @@ class CreateInBulk:
         mediator.set_loop(self.loop)
 
         data = await self.load_data()
+        added = 0
+
         for ind, datum in enumerate(data, start=1):
+            if added == self.count:
+                break
+
             try:
                 logger.info(f'Processing {ind}/{len(data)}')
                 logger.info(f'{datum}')
@@ -119,6 +125,7 @@ class CreateInBulk:
                 await mediator.attach_audio_answer(
                     flashcard, dictionary_inf['audio_file']
                 )
+                added += 1
 
             except Exception as err:
                 logger.exception(err)
@@ -129,6 +136,8 @@ class CreateInBulk:
             now = now.strftime('%Y_%m_%d_%H_%M_%S')
             with open(f'create_eng_in_bulk_errors_{now}.json', 'w') as fh:
                 json.dump(self.errors, fh)
+
+        logger.info(f'Added: {added}')
             
 
     async def load_data(self):
@@ -156,6 +165,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', required=True)
     parser.add_argument('--user', required=True)
+    parser.add_argument('--count', type=int, required=True)
     args = parser.parse_args()
 
     loop = asyncio.get_event_loop()
@@ -164,6 +174,7 @@ if __name__ == '__main__':
             loop=loop,
             file_path=args.file,
             user=args.user,
+            count=args.count,
             mediator_name='english'
         ).run()
     )
