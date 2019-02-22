@@ -62,6 +62,7 @@ class GeneralAlterAction(AbstractBaseAction):
             )
             if confirmed:
                 await self.mediator.update_flashcard(flashcard)
+                await self.mediator.attach_audio_answer(flashcard)
                 await self.mediator.print(
                     'Flashcard updated.',
                     bottom_margin=1,

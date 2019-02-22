@@ -53,29 +53,28 @@ class EnglishMediator(Mediator):
 
     async def save_flashcard(self, flashcard: Flashcard):
         await super().save_flashcard(flashcard=flashcard)
-        await self._download_audio_answer(flashcard)
 
     async def update_flashcard(self, flashcard: Flashcard):
         await super().update_flashcard(flashcard=flashcard)
-        await self._download_audio_answer(flashcard)
 
     async def delete_flashcard(self, flashcard: Flashcard):
         await super().delete_flashcard(flashcard=flashcard)
         await self._remove_audio_answer(flashcard)
 
-    async def play_audio_answer(self, flashcard):
-        audio_file_path = self._form_audio_answer_file_path(flashcard)
-        self.media_player.play(str(audio_file_path))
-
-    async def has_audio_answer(self, flashcard) -> bool:
-        fp = self._form_audio_answer_file_path(flashcard)
-        return fp.exists()
-
-    async def _download_audio_answer(self, flashcard):
+    async def attach_audio_answer(
+        self, flashcard: Flashcard, audio_answer_url: str=None
+    ):
         await self.print('Downloading audio answer...')
-        file_data = await self.text_to_speech.synthesize_audio(
-            text=flashcard.answer
-        )
+
+        if audio_answer_url is not None:
+            file_data = await self.text_to_speech.download_audio(
+                url=audio_answer_url
+            )
+        else:
+            file_data = await self.text_to_speech.synthesize_audio(
+                text=flashcard.answer
+            )
+
         if file_data:
             fp = self._form_audio_answer_file_path(flashcard)
             fp.parent.mkdir(parents=True, exist_ok=True)
@@ -88,6 +87,14 @@ class EnglishMediator(Mediator):
             await self.print(f'    File size: {file_size}', bottom_margin=1)
         else:
             await self.print(f"Couldn't get audio answer", bottom_margin=1)
+
+    async def play_audio_answer(self, flashcard):
+        audio_file_path = self._form_audio_answer_file_path(flashcard)
+        self.media_player.play(str(audio_file_path))
+
+    async def has_audio_answer(self, flashcard) -> bool:
+        fp = self._form_audio_answer_file_path(flashcard)
+        return fp.exists()
 
     async def _remove_audio_answer(self, flashcard):
         fp = self._form_audio_answer_file_path(flashcard)
