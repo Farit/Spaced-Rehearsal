@@ -7,7 +7,8 @@ from typing import Optional, List
 from src.utils import datetime_now
 from src.flashcard.flashcard_fields import (
     UserId, FlashcardId, Question, Answer, PhoneticTranscription, Source,
-    Explanation, Examples, Created, ReviewTimestamp, FlashcardType
+    Explanation, Examples, Created, ReviewTimestamp, FlashcardType,
+    ReviewVersion
 )
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
 
@@ -26,6 +27,7 @@ class Flashcard:
     examples = Examples()
     created = Created()
     review_timestamp = ReviewTimestamp()
+    review_version = ReviewVersion()
 
     def __init__(
             self, *,
@@ -35,6 +37,7 @@ class Flashcard:
             answer: str=None,
             created: datetime,
             review_timestamp: datetime,
+            review_version: int,
             flashcard_id: Optional[int]=None,
             phonetic_transcription: Optional[str]=None,
             source: Optional[str]=None,
@@ -47,6 +50,7 @@ class Flashcard:
         self.answer = answer
         self.created = created
         self.review_timestamp = review_timestamp
+        self.review_version = review_version
 
         self.flashcard_id = flashcard_id
         self.phonetic_transcription = phonetic_transcription
@@ -67,6 +71,7 @@ class Flashcard:
             answer=answer,
             created=datetime_now(),
             review_timestamp=FlashcardScheduler.to_init(answer),
+            review_version=0,
             flashcard_id=None,
             phonetic_transcription=phonetic_transcription,
             source=source,
@@ -150,5 +155,6 @@ class Flashcard:
             ('explanation', self.explanation),
             ('examples', self.examples),
             ('review_timestamp', self.review_timestamp),
+            ('review_version', self.review_version),
             ('created', self.created),
         ])

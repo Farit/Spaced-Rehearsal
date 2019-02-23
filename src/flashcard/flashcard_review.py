@@ -40,3 +40,4 @@ class FlashcardReview:
             self.flashcard.review_timestamp = FlashcardScheduler.to_init(
                 flashcard_answer=self.flashcard.answer
             )
+        self.flashcard.review_version += 1

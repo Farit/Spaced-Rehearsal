@@ -193,6 +193,7 @@ class DBSession:
             f'    question, '
             f'    answer, '
             f'    review_timestamp, '
+            f'    review_version, '
             f'    source, '
             f'    explanation, '
             f'    phonetic_transcription, '
@@ -221,6 +222,7 @@ class DBSession:
                 review_timestamp=convert_datetime_to_local(
                     data['review_timestamp']
                 ),
+                review_version=data['review_version'],
                 flashcard_id=data['flashcard_id'],
                 phonetic_transcription=data['phonetic_transcription'],
                 source=data['source'],
@@ -237,7 +239,9 @@ class DBSession:
                 f'WHERE user_id = :user_id AND '
                 f'      flashcard_type = :flashcard_type AND '
                 f'      datetime(review_timestamp, "localtime") <= :now '
-                f'ORDER BY datetime(review_timestamp, "localtime")'
+                f'ORDER BY '
+                f'      review_version DESC, '
+                f'      datetime(review_timestamp, "localtime")'
             ),
             request_params={
                 'flashcard_type': self.flashcard_type,
@@ -249,9 +253,9 @@ class DBSession:
         flashcard_container = FlashcardContainer()
         group_by_date = groupby(
             flashcards,
-            key=lambda f: f['review_timestamp'].date()
+            key=lambda f: (f['review_version'], f['review_timestamp'].date())
         )
-        for date, data in group_by_date:
+        for key, data in group_by_date:
             flashcards_by_date = list(data)
             random.shuffle(flashcards_by_date)
             flashcard_container.extend(flashcards_by_date)
@@ -267,6 +271,7 @@ class DBSession:
                 '    question, '
                 '    answer, '
                 '    review_timestamp, '
+                '    review_version, '
                 '    source, '
                 '    explanation, '
                 '    phonetic_transcription, '
@@ -278,6 +283,7 @@ class DBSession:
                 '    :question, '
                 '    :answer, '
                 '    :review_timestamp, '
+                '    :review_version, '
                 '    :source, '
                 '    :explanation, '
                 '    :phonetic_transcription, '
@@ -291,6 +297,7 @@ class DBSession:
                     'review_timestamp': datetime_change_timezone(
                         flashcard.review_timestamp, offset=0
                     ),
+                    'review_version': flashcard.review_version,
                     'source': flashcard.source,
                     'explanation': flashcard.explanation,
                     'phonetic_transcription': flashcard.phonetic_transcription,
@@ -364,17 +371,20 @@ class DBSession:
             current_review_timestamp: datetime,
             current_result: str,
             next_review_timestamp: datetime,
+            next_review_version: int,
     ) -> None:
         with self.db_conn:
             self.db_cursor.execute(
                 'UPDATE flashcards SET '
-                '   review_timestamp=:review_timestamp '
+                '   review_timestamp=:review_timestamp, '
+                '   review_version=:review_version '
                 'WHERE id=:flashcard_id',
                 {
                     'flashcard_id': flashcard_id,
                     'review_timestamp': datetime_change_timezone(
                         next_review_timestamp, offset=0
-                    )
+                    ),
+                    'review_version': next_review_version
                 }
             )
             self.db_cursor.execute(

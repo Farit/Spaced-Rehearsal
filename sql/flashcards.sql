@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS flashcards(
     explanation TEXT,
     user_id INTEGER NOT NULL,
     review_timestamp TIMESTAMP NOT NULL,
+    review_version INTEGER NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FOREIGN KEY(user_id) REFERENCES users(id)
 );

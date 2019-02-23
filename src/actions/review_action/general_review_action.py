@@ -100,6 +100,7 @@ class GeneralReviewAction(AbstractBaseAction):
             current_review_timestamp=current_review_timestamp,
             current_result=current_result,
             next_review_timestamp=flashcard.review_timestamp,
+            next_review_version=flashcard.review_version,
         )
         review_stat.inc_reviewed()
 

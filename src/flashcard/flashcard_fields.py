@@ -176,3 +176,14 @@ class ReviewTimestamp(Field):
 
         super().__set__(instance, value)
 
+
+class ReviewVersion(Field):
+
+    def __init__(self, attr_name='review_version', print_name='Review version'):
+        super().__init__(attr_name=attr_name, print_name=print_name)
+
+    def __set__(self, instance, value):
+        if not isinstance(value, int):
+            err_msg = f'{self.attr_name}: {value!r} must be integer.'
+            raise TypeError(err_msg)
+        super().__set__(instance, value)

@@ -102,12 +102,14 @@ class Mediator:
             current_review_timestamp: datetime,
             current_result: str,
             next_review_timestamp: datetime,
+            next_review_version: int,
     ) -> None:
         self.db_session.update_flashcard_review_state(
             flashcard_id=flashcard_id,
             current_result=current_result,
             current_review_timestamp=current_review_timestamp,
             next_review_timestamp=next_review_timestamp,
+            next_review_version=next_review_version,
         )
 
     async def delete_flashcard(self, flashcard: Flashcard):
