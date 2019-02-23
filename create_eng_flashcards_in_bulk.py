@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 
 import os.path
+import random
 import argparse
 import asyncio
 import logging
@@ -8,6 +9,7 @@ import logging.config
 import json
 import sys
 import site
+import time
 
 from datetime import datetime
 
@@ -55,11 +57,15 @@ class CreateInBulk:
         mediator.set_loop(self.loop)
 
         data = await self.load_data()
+        total = 0
         added = 0
 
         for ind, datum in enumerate(data, start=1):
             if added == self.count:
                 break
+
+            time.sleep(1)
+            total += 1
 
             try:
                 logger.info(f'Processing {ind}/{len(data)}')
@@ -137,7 +143,7 @@ class CreateInBulk:
             with open(f'create_eng_in_bulk_errors_{now}.json', 'w') as fh:
                 json.dump(self.errors, fh)
 
-        logger.info(f'Added: {added}')
+        logger.info(f'Total: {total}. Added: {added}')
             
 
     async def load_data(self):
@@ -157,6 +163,8 @@ class CreateInBulk:
         # ]
         with open(self.file_path) as fh:
             data = json.loads(fh.read())
+
+        random.shuffle(data)
         logger.info(f'Loaded data: {len(data)}')
         return data
 
