@@ -23,7 +23,7 @@ os.chdir(project_dir)
 
 from src.flashcard import Flashcard
 from src.mediator import get_mediator
-from src.utils import log_config_as_dict
+from src.utils import log_config_as_dict, normalize_value
 
 
 log_config_as_dict['root'] = {
@@ -34,41 +34,34 @@ logging.config.dictConfig(log_config_as_dict)
 logger = logging.getLogger(__name__)
 
 
-class CreateInBulk:
+class SwissKnife:
 
-    def __init__(self, loop, file_path, user, count, mediator_name):
+    def __init__(self, loop):
         self.loop = loop
-        self.file_path = file_path
-        self.user = user
-        self.count = count
-        self.mediator_name = mediator_name
         self.errors = []
 
-    async def run(self):
-        logger.info(f'File: {self.file_path}')
-        logger.info(f'User: {self.user}')
-        logger.info(f'Mediator: {self.mediator_name}')
+    async def create(self, file_path, user, number, mediator_name):
+        logger.info('Create new flashcards')
+        logger.info(f'File: {file_path}')
+        logger.info(f'User: {user}')
+        logger.info(f'Mediator: {mediator_name}')
 
-        mediator = get_mediator(self.mediator_name)
-        is_login = await mediator.login_user(self.user)
-        if not is_login:
-            sys.exit(f'Failed to login user: {self.user}')
+        mediator = await self.setup_mediator(user, mediator_name)
 
-        mediator.set_loop(self.loop)
+        data = await self.load_data(file_path)
+        ready_data = [
+            d for d in data
+            if d.get('is_ready_to_add') and not d.get('created')
+        ]
+        created = 0
 
-        data = await self.load_data()
-        total = 0
-        added = 0
-
-        for ind, datum in enumerate(data, start=1):
-            if added == self.count:
+        for ind, datum in enumerate(ready_data, start=1):
+            if created == number:
                 break
-
             time.sleep(1)
-            total += 1
 
             try:
-                logger.info(f'Processing {ind}/{len(data)}')
+                logger.info(f'Processing {ind}/{len(ready_data)}')
                 logger.info(f'{datum}')
 
                 if len(datum['answer'].split()) != 1:
@@ -131,25 +124,42 @@ class CreateInBulk:
                 await mediator.attach_audio_answer(
                     flashcard, dictionary_inf['audio_file']
                 )
-                added += 1
+
+                datum['created'] = True
+                created += 1
 
             except Exception as err:
                 logger.exception(err)
                 self.errors.append({'flashcard': datum, 'error': str(err)})
+                break
 
         if self.errors:
             now = datetime.now()
             now = now.strftime('%Y_%m_%d_%H_%M_%S')
-            with open(f'create_eng_in_bulk_errors_{now}.json', 'w') as fh:
-                json.dump(self.errors, fh)
+            with open(f'swiss_knife_create_errors_{now}.json', 'w') as fh:
+                fh.write(json.dumps(self.errors, ensure_ascii=False, indent=4))
 
-        logger.info(f'Total: {total}. Added: {added}')
-            
+        await self.dump_data(file_path, data)
+        logger.info(
+            f'Total: {len(data)}. '
+            f'Ready: {len(ready_data)}. '
+            f'Created: {created}'
+        )
 
-    async def load_data(self):
+    async def setup_mediator(self, user, mediator_name):
+        mediator = get_mediator(mediator_name)
+        is_login = await mediator.login_user(user)
+        if not is_login:
+            sys.exit(f'Failed to login user: {self.user}')
+
+        mediator.set_loop(self.loop)
+        return mediator
+
+    async def load_data(self, file_path, shuffle=True):
         logger.info('Loading data ...')
         # [
         #     {
+        #         "created": false,
         #         "answer": "good",
         #         "question": "хороший",
         #         "source": "Core vocabulary.",
@@ -157,32 +167,89 @@ class CreateInBulk:
         #         "examples": [
         #            "a good hotel",
         #            "good quality cloth"
-        #         ]
+        #         ],
+        #         "is_ready_to_add": true
+        #         "created": false
         #     },
         #     ...
         # ]
-        with open(self.file_path) as fh:
+        with open(file_path) as fh:
             data = json.loads(fh.read())
 
-        random.shuffle(data)
+        if shuffle:
+            random.shuffle(data)
         logger.info(f'Loaded data: {len(data)}')
         return data
+
+    async def dump_data(self, file_path, data):
+        logger.info('Dumping data ...')
+        with open(file_path, 'w') as fh:
+            fh.write(json.dumps(data, ensure_ascii=False, indent=4))
+        logger.info(f'Dumped data: {len(data)}')
+
+    async def comb(self, file_path):
+        logger.info(f'Operation: comb')
+        logger.info(f'File: {file_path}')
+        
+        data = await self.load_data(file_path)
+        data.sort(
+            key=lambda d: (
+                d.get('is_ready_to_add', False), d.get('created', False)
+            )
+        )
+        count_ready = 0
+        created = 0
+        for d in data:
+            if 'is_ready_to_add' in d:
+                count_ready += int(d['is_ready_to_add'])
+                created += int(d.get('created', False))
+            else:
+                d['is_ready_to_add'] = False
+        print(
+            f'Total: {len(data)}. '
+            f'Ready to add: {count_ready}. '
+            f'Created: {created}.'
+        )
+        await self.dump_data(file_path, data)
+
+
+def create(args):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(
+        SwissKnife(loop=loop).create(
+            file_path=args.file,
+            user=args.user,
+            number=args.num,
+            mediator_name='english'
+        )
+    )
+
+
+def comb(args):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(SwissKnife(loop=loop).comb(args.file))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file', required=True)
-    parser.add_argument('--user', required=True)
-    parser.add_argument('--count', type=int, required=True)
-    args = parser.parse_args()
+    subparsers = parser.add_subparsers()
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(
-        CreateInBulk(
-            loop=loop,
-            file_path=args.file,
-            user=args.user,
-            count=args.count,
-            mediator_name='english'
-        ).run()
+    parser_create = subparsers.add_parser(
+        'create', help='Creates new flashcards from the file data'
     )
+    parser_create.add_argument('--file', required=True)
+    parser_create.add_argument('--user', required=True)
+    parser_create.add_argument('--num', type=int, required=True)
+    parser_create.set_defaults(func=create)
+
+    parser_mark_as_created = subparsers.add_parser(
+        'comb', help=(
+            'Combs the raw data. Sorts it by "is_ready_to_add" field in '
+            'ascending order. Outputs the number of ready to add data.'
+        )
+    )
+    parser_mark_as_created.add_argument('--file', required=True)
+    parser_mark_as_created.set_defaults(func=comb)
+
+    args = parser.parse_args()
+    args.func(args)
