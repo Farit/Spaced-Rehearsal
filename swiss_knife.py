@@ -40,8 +40,8 @@ class SwissKnife:
         self.loop = loop
         self.errors = []
 
-    async def create(self, file_path, user, number, mediator_name):
-        logger.info('Create new flashcards')
+    async def create_words(self, file_path, user, number, mediator_name):
+        logger.info('Create new flashcards [words]')
         logger.info(f'File: {file_path}')
         logger.info(f'User: {user}')
         logger.info(f'Mediator: {mediator_name}')
@@ -51,7 +51,9 @@ class SwissKnife:
         data = await self.load_data(file_path)
         ready_data = [
             d for d in data
-            if d.get('is_ready_to_add') and not d.get('created')
+            if d.get('is_ready_to_add') and
+               not d.get('created') and
+               len(d['answer'].strip().split()) == 1
         ]
         created = 0
 
@@ -64,31 +66,14 @@ class SwissKnife:
                 logger.info(f'Processing {ind}/{len(ready_data)}')
                 logger.info(f'{datum}')
 
-                if len(datum['answer'].split()) != 1:
-                    logger.error('Compound answer.')
-                    self.errors.append({
-                        'flashcard': datum,
-                        'error': f'compound answer'
-                    })
-                    continue
-
-                duplicates = await mediator.search_flashcard(
-                    datum['answer']
-                )
-                duplicate = None
-                for f in duplicates:
-                    if f['question'] == datum['question']:
-                        duplicate = f
-                        break
-
-                if duplicate is not None:
+                duplicate = await self.get_duplicate(mediator, datum)
+                if duplicate:
                     logger.error('Duplicate')
                     self.errors.append({
                         'flashcard': datum,
                         'error': f'duplicate, flashcard_id: {duplicate.id}'
                     })
                     continue
-                    
                 
                 dictionary_inf = await mediator.dictionary.get_information(
                     word=datum['answer']
@@ -136,7 +121,7 @@ class SwissKnife:
         if self.errors:
             now = datetime.now()
             now = now.strftime('%Y_%m_%d_%H_%M_%S')
-            with open(f'swiss_knife_create_errors_{now}.json', 'w') as fh:
+            with open(f'swiss_knife_create_words_errors_{now}.json', 'w') as fh:
                 fh.write(json.dumps(self.errors, ensure_ascii=False, indent=4))
 
         await self.dump_data(file_path, data)
@@ -145,6 +130,92 @@ class SwissKnife:
             f'Ready: {len(ready_data)}. '
             f'Created: {created}'
         )
+
+    async def create_phrases(self, file_path, user, number, mediator_name):
+        logger.info('Create new flashcards [phrases]')
+        logger.info(f'File: {file_path}')
+        logger.info(f'User: {user}')
+        logger.info(f'Mediator: {mediator_name}')
+
+        mediator = await self.setup_mediator(user, mediator_name)
+
+        data = await self.load_data(file_path)
+        ready_data = [
+            d for d in data
+            if d.get('is_ready_to_add') and
+               not d.get('created') and 
+               len(d['answer'].strip().split()) > 1
+        ]
+        created = 0
+
+        for ind, datum in enumerate(ready_data, start=1):
+            if created == number:
+                break
+            time.sleep(1)
+
+            try:
+                logger.info(f'Processing {ind}/{len(ready_data)}')
+                logger.info(f'{datum}')
+
+                duplicate = await self.get_duplicate(mediator, datum)
+                if duplicate:
+                    logger.error('Duplicate')
+                    self.errors.append({
+                        'flashcard': datum,
+                        'error': f'duplicate, flashcard_id: {duplicate.id}'
+                    })
+                    continue
+
+                phonetic_transcription = (
+                    await mediator.dictionary.get_text_phonetic_spelling(
+                        datum['answer']
+                    )
+                )
+                    
+                flashcard: Flashcard = Flashcard.create(
+                    user_id=mediator.get_user_id(),
+                    flashcard_type=mediator.name(),
+                    question=datum['question'],
+                    answer=datum['answer'],
+                    source=datum['source'],
+                    phonetic_transcription=phonetic_transcription,
+                    explanation=datum['explanation'],
+                    examples=datum['examples']
+                )
+                await mediator.save_flashcard(flashcard)
+                await mediator.attach_audio_answer(flashcard)
+
+                datum['created'] = True
+                created += 1
+
+            except Exception as err:
+                logger.exception(err)
+                self.errors.append({'flashcard': datum, 'error': str(err)})
+                break
+
+        if self.errors:
+            now = datetime.now()
+            now = now.strftime('%Y_%m_%d_%H_%M_%S')
+            with open(f'swiss_knife_create_phrases_errors_{now}.json', 'w') as fh:
+                fh.write(json.dumps(self.errors, ensure_ascii=False, indent=4))
+
+        await self.dump_data(file_path, data)
+        logger.info(
+            f'Total: {len(data)}. '
+            f'Ready: {len(ready_data)}. '
+            f'Created: {created}'
+        )
+
+    async def get_duplicate(self, mediator, datum):
+        duplicates = await mediator.search_flashcard(
+            datum['answer']
+        )
+        duplicate = None
+        for f in duplicates:
+            if f['question'] == datum['question']:
+                duplicate = f
+                break
+        return duplicate
 
     async def setup_mediator(self, user, mediator_name):
         mediator = get_mediator(mediator_name)
@@ -213,10 +284,22 @@ class SwissKnife:
         await self.dump_data(file_path, data)
 
 
-def create(args):
+def create_words(args):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
-        SwissKnife(loop=loop).create(
+        SwissKnife(loop=loop).create_words(
+            file_path=args.file,
+            user=args.user,
+            number=args.num,
+            mediator_name='english'
+        )
+    )
+
+
+def create_phrases(args):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(
+        SwissKnife(loop=loop).create_phrases(
             file_path=args.file,
             user=args.user,
             number=args.num,
@@ -234,22 +317,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    parser_create = subparsers.add_parser(
-        'create', help='Creates new flashcards from the file data'
-    )
-    parser_create.add_argument('--file', required=True)
-    parser_create.add_argument('--user', required=True)
-    parser_create.add_argument('--num', type=int, required=True)
-    parser_create.set_defaults(func=create)
+    parser_create_words = subparsers.add_parser('create_words')
+    parser_create_words.add_argument('--file', required=True)
+    parser_create_words.add_argument('--user', required=True)
+    parser_create_words.add_argument('--num', type=int, required=True)
+    parser_create_words.set_defaults(func=create_words)
 
-    parser_mark_as_created = subparsers.add_parser(
-        'comb', help=(
-            'Combs the raw data. Sorts it by "is_ready_to_add" field in '
-            'ascending order. Outputs the number of ready to add data.'
-        )
-    )
-    parser_mark_as_created.add_argument('--file', required=True)
-    parser_mark_as_created.set_defaults(func=comb)
+    parser_create_phrases = subparsers.add_parser('create_phrases')
+    parser_create_phrases.add_argument('--file', required=True)
+    parser_create_phrases.add_argument('--user', required=True)
+    parser_create_phrases.add_argument('--num', type=int, required=True)
+    parser_create_phrases.set_defaults(func=create_phrases)
+
+    parser_comb = subparsers.add_parser('comb')
+    parser_comb.add_argument('--file', required=True)
+    parser_comb.set_defaults(func=comb)
 
     args = parser.parse_args()
     args.func(args)
