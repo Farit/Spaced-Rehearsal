@@ -14,9 +14,15 @@ class EnglishReviewAction(GeneralReviewAction):
         can_continue = True
 
         if not has_audio_answer:
-            can_continue: bool = await self.mediator.input_confirmation(
-                'Do you want to continue?'
+            action = await self.mediator.input_action(
+                action_answers=('c', 'n'),
+                action_msgs=[
+                    'Do you want to continue?',
+                    f'[{self.mediator.format_green("c")}/'
+                    f'{self.mediator.format_red("n")}]',
+                ]
             )
+            can_continue = True if action == 'c' else False
         else:
             while True:
                 action = await self.mediator.input_action(
