@@ -1557,7 +1557,7 @@
         "examples": []
     },
     {
-        "answer": "I'm getting ready to go out.",
+        "answer": "I am getting ready to go out.",
         "question": "Я готовлюсь к выходу.",
         "explanation": "",
         "source": "English phrases",
@@ -2313,7 +2313,7 @@
         "examples": []
     },
     {
-        "answer": "Very good, thanks",
+        "answer": "Very good, thank you",
         "question": "Очень хорошо, спасибо",
         "explanation": "",
         "source": "English phrases",
@@ -3276,7 +3276,7 @@
         "examples": []
     },
     {
-        "answer": "It's near the Supermarket",
+        "answer": "It is near the Supermarket",
         "question": "Это около супермаркета",
         "explanation": "",
         "source": "English phrases",
@@ -3510,7 +3510,7 @@
         "examples": []
     },
     {
-        "answer": "I'm leaving tomorrow",
+        "answer": "I am leaving tomorrow",
         "question": "Я уезжаю завтра",
         "explanation": "",
         "source": "English phrases",
@@ -4950,7 +4950,7 @@
         "examples": []
     },
     {
-        "answer": "Do you think it's going to rain tomorrow?",
+        "answer": "Do you think it is going to rain tomorrow?",
         "question": "Ты думаешь, завтра пойдет дождь?",
         "explanation": "",
         "source": "English phrases",
@@ -5238,7 +5238,7 @@
         "examples": []
     },
     {
-        "answer": "That's too many",
+        "answer": "That is too many",
         "question": "Это очень много",
         "explanation": "",
         "source": "English phrases",
@@ -5310,7 +5310,7 @@
         "examples": []
     },
     {
-        "answer": "That's it",
+        "answer": "That is it",
         "question": "Вот и все",
         "explanation": "",
         "source": "English phrases",
@@ -5328,7 +5328,7 @@
         "examples": []
     },
     {
-        "answer": "That's fine",
+        "answer": "That is fine",
         "question": "Это нормально",
         "explanation": "",
         "source": "English phrases",
@@ -6057,7 +6057,7 @@
         "examples": []
     },
     {
-        "answer": "That's too much",
+        "answer": "That is too much",
         "question": "Это очень много",
         "explanation": "",
         "source": "English phrases",
@@ -6066,7 +6066,7 @@
         "examples": []
     },
     {
-        "answer": "That's alright",
+        "answer": "That is alright",
         "question": "Все в порядке",
         "explanation": "",
         "source": "English phrases",
