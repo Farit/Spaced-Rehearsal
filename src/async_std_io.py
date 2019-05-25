@@ -1,3 +1,4 @@
+import re
 import sys
 import logging
 import readline
@@ -19,6 +20,7 @@ class AsyncStdIO:
         self.loop = None
         self.queue = asyncio.Queue()
         self.formatting = Formatting()
+        self.ansi_escape_codes = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
 
     def set_loop(self, loop):
         self.loop = loop
@@ -50,7 +52,7 @@ class AsyncStdIO:
         width = terminal_size[0] - 10
         for msg in msgs:
             msg = str(msg)
-            if len(msg) > 1:
+            if self._get_real_length(msg) > width:
                 output_lines = textwrap.wrap(msg, width=width)
                 for ind, output_line in enumerate(output_lines):
                     if ind != 0:
@@ -96,3 +98,12 @@ class AsyncStdIO:
 
         return action
 
+    def _get_real_length(self, str_seq):
+        """
+        Returns text length without ANSI control codes.
+        These codes affect color and display style, but they have no logical
+        length.
+        """
+        # Remove the ANSI escape sequences from a string by substituting them
+        # with an empty string.
+        return len(self.ansi_escape_codes.sub('', str_seq))
