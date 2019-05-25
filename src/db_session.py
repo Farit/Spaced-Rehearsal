@@ -407,7 +407,7 @@ class DBSession:
         flashcard_container = FlashcardContainer()
 
         search_queries = [
-            s.strip().lower() for s in search_queries if s.strip()
+            s.strip() for s in search_queries if s.strip()
         ]
         if search_queries:
             needle = ' OR '.join(str(q) + '*' for q in search_queries)

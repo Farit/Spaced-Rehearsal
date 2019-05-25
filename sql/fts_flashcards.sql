@@ -1,5 +1,8 @@
-CREATE VIRTUAL TABLE fts_flashcards
-USING fts4(answer, question, content='flashcards');
+-- The default tokenizer "simple" doest not ignore case 
+-- for non-english characters. For example searching word in russian depends
+-- on its case. Using unicode61 tokenizer solves this problem.
+CREATE VIRTUAL TABLE fts_flashcards 
+USING fts4(answer, question, content='flashcards', tokenize=unicode61);
 
 -- Triggers to keep the FTS index up to date.
 CREATE TRIGGER IF NOT EXISTS fts_flashcards_before_delete
