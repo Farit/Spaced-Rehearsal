@@ -14,8 +14,11 @@ class EnglishAlterAction(GeneralAlterAction):
         source = await self.mediator.input_source(
             pre_fill=flashcard.source
         )
-        phonetic_transcription = await self.mediator.input_phonetic_transcription(
-            data=answer
+        phonetic_transcription = (
+            await self.mediator.input_phonetic_transcription(
+                flashcard_answer=answer,
+                curr_ans_pronunciation=flashcard.phonetic_transcription,
+            )
         )
         explanation = await self.mediator.input_explanation(
             pre_fill=flashcard.explanation

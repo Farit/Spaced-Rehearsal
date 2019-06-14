@@ -10,8 +10,10 @@ class EnglishCreateAction(GeneralCreateAction):
         question = await self.mediator.input_question()
         answer = await self.mediator.input_answer()
         source = await self.mediator.input_source()
-        phonetic_transcription = await self.mediator.input_phonetic_transcription(
-            data=answer
+        phonetic_transcription = (
+            await self.mediator.input_phonetic_transcription(
+                flashcard_answer=answer
+            )
         )
         explanation = await self.mediator.input_explanation()
         examples = await self.mediator.input_examples()

@@ -6,10 +6,9 @@ from typing import List
 
 from src.mediator.base_mediator import Mediator
 from src.flashcard import Flashcard
-from src.dictionary import Dictionary
 from src.text_to_speech import TextToSpeech
 from src.media_player import Player
-from src.utils import get_human_readable_file_size
+from src.utils import get_human_readable_file_size, normalize_eng_word
 
 from src.actions import (
     EnglishReviewAction,
@@ -20,12 +19,9 @@ from src.actions import (
 
 class EnglishMediator(Mediator):
 
-    def __init__(self):
+    def __init__(self, dictionary=None):
         super().__init__()
-        self.dictionary = Dictionary(
-            lang=Dictionary.Lang.ENG,
-            config=self.config
-        )
+        self.dictionary = dictionary
         self.text_to_speech = TextToSpeech(
             lang=TextToSpeech.Lang.ENG,
             config=self.config
@@ -109,16 +105,18 @@ class EnglishMediator(Mediator):
         )
         return self.project_root_path.joinpath(audio_file_path)
 
-    async def input_phonetic_transcription(self, data):
-        await self.print(
-            f'Please, wait a bit. Retrieving phonetic spellings.',
-            bold=True
-        )
-        text_spelling = await self.dictionary.get_text_phonetic_spelling(
-            text=data
-        )
+    async def input_phonetic_transcription(
+        self, flashcard_answer, curr_ans_pronunciation=None
+    ):
+        pre_fill = curr_ans_pronunciation
+
+        pronunciation = await self.get_pronunciation(flashcard_answer)
+        if pronunciation is not None:
+            pre_fill = pronunciation
+
         phonetic_transcription = await self.input(
-            'Phonetic transcription', pre_fill=text_spelling
+            'Phonetic transcription',
+            pre_fill=pre_fill
         )
         return phonetic_transcription
  
@@ -144,3 +142,28 @@ class EnglishMediator(Mediator):
      
         return examples 
 
+    async def get_pronunciation(self, flashcard_answer):
+        if self.dictionary is not None:
+            await self.print(
+                f'Please, wait a bit. Retrieving phonetic spellings.',
+                bold=True
+            )
+            err_codes = self.dictionary.error_codes
+            pronunciations = []
+
+            for word in flashcard_answer.split():
+                normalized_word = normalize_eng_word(word)
+
+                res = await self.dictionary.get_pronunciation(normalized_word)
+                pron, err = res['pronunciation'], res['error']
+
+                if pron is None and err is err_codes.CANNOT_FIND_IN_DICT:
+
+                    res = await self.dictionary.get_lemmas(normalized_word)
+                    lemmas, err = res['lemmas'], res['error']
+                    if lemmas:
+                        res = await self.dictionary.get_pronunciation(lemmas[0])
+                        pron, err = res['pronunciation'], res['error']
+
+                pronunciations.append((normalized_word, f'/{pron}/'))
+            return '   '.join(f'{w}: {p}' for w, p in pronunciations)

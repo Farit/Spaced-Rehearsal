@@ -5,6 +5,25 @@ import math
 import datetime
 import string
 import logging
+import doctest
+
+
+def normalize_eng_word(word):
+    """
+    Returns normalized word containing only lower case letters. 
+    Correctly handles compound word with a hyphen.
+    >>> print(normalize_eng_word('book.,'))
+    book
+    >>> print(normalize_eng_word('NON-SMOKING ?'))
+    non-smoking
+    >>> print(normalize_eng_word('table-'))
+    table
+    >>> print(normalize_eng_word('-chair'))
+    chair
+    >>> print(normalize_eng_word('- . co-workers !?  '))
+    co-workers
+    """
+    return re.sub(r'(^-|-$|[^a-z-]*)', '', word.lower())
 
 
 def datetime_now():
@@ -150,3 +169,7 @@ log_config_as_dict = {
         # },
     }
 }
+
+
+if __name__ == '__main__':
+    doctest.testmod(verbose=True)

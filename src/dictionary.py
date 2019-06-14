@@ -4,6 +4,9 @@ import json
 import string
 import socket
 import os
+import doctest
+
+from abc import ABC, abstractmethod
 
 from tornado.httpclient import (
     AsyncHTTPClient, HTTPRequest, HTTPResponse, HTTPError
@@ -12,206 +15,282 @@ from tornado.httpclient import (
 logger = logging.getLogger(__name__)
 
 
-class Dictionary:
-    class Lang(enum.Enum):
-        ENG = 'english'
-
-    def __init__(self, lang: Lang, config):
-        self.lang = lang
-        self.config = config
-        self.oxford_eng_dict = OxfordEngDictionary(config=config)
-
-    async def get_text_phonetic_spelling(self, text):
-        result = []
-        spellings = {}
-
-        for word in text.split():
-            normalized_word = self._normalize_word(word)
-            if normalized_word not in spellings:
-                try:
-                    spelling = await self.get_word_phonetic_spelling(
-                        normalized_word
-                    )
-                except socket.gaierror:
-                    spelling = None
-                spellings[normalized_word] = f'/{spelling}/'
-
-            result.append((normalized_word, spellings[normalized_word]))
-
-        return '   '.join(f'{word}: {spelling}' for word, spelling in result)
-
-    async def get_information(self, word):
-        information = {}
-
-        if self.lang == self.Lang.ENG:
-            information = await self.oxford_eng_dict.get_info(word)
-
-        if information.get('spelling'):
-            information['spelling'] = f'{word}: /{information["spelling"]}/'
-
-        return information
-
-    async def get_word_phonetic_spelling(self, word):
-        spelling = None
-        log_prefix_msg = (
-            f'Get word phonetic spelling: word={word}, '
-            f'lang={self.lang.value}.'
-        )
-
-        if self.lang == self.Lang.ENG:
-            logger.info(
-                f'{log_prefix_msg} '
-                f'Trying Oxford English Dictionary.'
-            )
-
-            if not self.oxford_eng_dict.is_in_service:
-                logger.info(
-                    f'{log_prefix_msg} '
-                    f'Oxford English Dictionary is out of service.'
-                )
-                return spelling
-
-            spelling = await self.oxford_eng_dict.get_word_phonetic_spelling(
-                word=word,
-                is_lemmatize=False
-            )
-            if not spelling:
-                spelling = await self.oxford_eng_dict.get_word_phonetic_spelling(
-                    word=word,
-                    is_lemmatize=True
-                )
-
-        return spelling
-
-    @staticmethod
-    def _normalize_word(word):
-        normalized_word = word.lower().strip()
-        normalized_word = normalized_word.strip(string.punctuation)
-        return normalized_word
+class ErrorCodes(enum.Enum):
+    CANNOT_FIND_IN_DICT = 'cannot_find_in_dict'
 
 
-class OxfordEngDictionary:
+class DictionaryAbstract(ABC):
+    error_codes = ErrorCodes
+
+    def __init__(self):
+        self.cache = Cache()
+        self.async_http_client = AsyncHTTPClient()
+        self.num_api_requests = 0
+
+    @abstractmethod
+    async def check_connection(self) -> dict:
+        """
+        Varifies connection to the dictionary api with provided credentials. 
+        Returns on successful connection:
+            {'is_success': True, 'error': None}
+        Otherwise:
+            {'is_success': False, 'error': <error>}
+        """
+        pass
+
+    @abstractmethod
+    async def get_lemmas(self, word: str) -> dict:
+        """
+        Returns the possible lemmas ("root" forms) for a given inflected word.
+        (e.g., swimming -> swim).
+        Lemma is a general term for any headword, phrase, or other form
+        that can be looked up in a dictionary.
+        An inflection is a change in the form of a word to express a 
+        grammatical function such as tense, mood, purson, number, case or 
+        gender. (e.g., 'boxes' is an inflected form of 'box')
+
+        Returns on success:
+            {'lemmas': <lemmas>, 'error': None}
+        Otherwise:
+            {'lemmas': None, 'error': <error>}
+        """
+        pass
+
+    @abstractmethod
+    async def get_pronunciation(self, word: str) -> dict:
+        """
+        Returns pronunciation of a word (e.g., book -> bʊk)
+
+        Returns on success:
+            {'pronunciation': <pronunciation>, 'error': None}
+        Otherwise:
+            {'pronunciation': None, 'error': <error>}
+        """
+        pass
+
+
+class OxfordEngDict(DictionaryAbstract):
     """
     Docs: https://developer.oxforddictionaries.com/documentation
     """
     source_lang = 'en'
 
-    def __init__(self, config):
-        self.config = config
-        self.api_base_url = self.config['dictionary'].get(
-            'oxford_dict_api_base_url'
-        )
-        self.app_id = os.getenv('OXFORD_DICTIONARY_APP_ID')
-        self.app_key = os.getenv('OXFORD_DICTIONARY_APP_KEY')
-        self.async_http_client = AsyncHTTPClient()
+    def __init__(self, api_base_url, app_id, app_key):
+        super().__init__()
+        self.api_base_url = api_base_url
+        self.app_id = app_id
+        self.app_key = app_key
 
-    @property
-    def is_in_service(self):
-        return (
-            bool(self.app_id) and
-            bool(self.app_key) and
-            bool(self.api_base_url)
-        )
+    async def check_connection(self) -> dict:
+        """
+        >>> import asyncio
+        >>> loop = asyncio.new_event_loop()
+        >>> app_id = os.getenv('OXFORD_DICTIONARY_APP_ID')
+        >>> app_key = os.getenv('OXFORD_DICTIONARY_APP_KEY')
+        >>> api_base_url = 'https://od-api.oxforddictionaries.com/api/v1'
+        >>> dictionary = OxfordEngDict(api_base_url, app_id, app_key)
+        >>> loop.run_until_complete(dictionary.check_connection())
+        {'is_success': True, 'error': None}
+        >>> app_id = None
+        >>> app_key = None
+        >>> api_base_url = 'https://od-api.oxforddictionaries.com/api/v1'
+        >>> dictionary = OxfordEngDict(api_base_url, app_id, app_key)
+        >>> res = loop.run_until_complete(dictionary.check_connection())
+        >>> print(res['is_success'])
+        False
+        >>> loop.close()
+        """
+        res = {'is_success': True, 'error': None}
 
-    async def get_info(self, word):
-        information = {}
-        try:
+        #url = f'{self.api_base_url}/lemmas/{self.source_lang}/book'
+        url = f'{self.api_base_url}/inflections/{self.source_lang}/book'
+        http_request = self.form_http_request(url)
+        response = await self.fetch_response(http_request)
+
+        if not response['is_success']:
+            res['is_success'] = False
+            res['error'] = response['error']
+
+        return res
+
+    async def get_lemmas(self, word: str) -> dict:
+        """
+        >>> import asyncio
+        >>> loop = asyncio.new_event_loop()
+        >>> app_id = os.getenv('OXFORD_DICTIONARY_APP_ID')
+        >>> app_key = os.getenv('OXFORD_DICTIONARY_APP_KEY')
+        >>> api_base_url = 'https://od-api.oxforddictionaries.com/api/v1'
+        >>> dictionary = OxfordEngDict(api_base_url, app_id, app_key)
+        >>> print(dictionary.cache)
+        CacheInfo(hits=0, misses=0, currsets=0)
+        >>> loop.run_until_complete(dictionary.get_lemmas('looked'))
+        {'lemmas': ['look'], 'error': None}
+        >>> print(dictionary.cache)
+        CacheInfo(hits=0, misses=1, currsets=1)
+        >>> loop.run_until_complete(dictionary.get_lemmas('looked'))
+        {'lemmas': ['look'], 'error': None}
+        >>> print(dictionary.cache)
+        CacheInfo(hits=1, misses=1, currsets=1)
+        >>> loop.run_until_complete(dictionary.get_lemmas('aaabbbccc'))
+        {'lemmas': None, 'error': <ErrorCodes.CANNOT_FIND_IN_DICT: 'cannot_find_in_dict'>}
+        >>> loop.close()
+        """
+        result = {
+            'lemmas': self.cache.get('lemmas', word),
+            'error': None
+        }
+
+        if result['lemmas'] is self.cache.missing_value_sentinel:
+            #url = f'{self.api_base_url}/lemmas/{self.source_lang}/{word}'
+            url = f'{self.api_base_url}/inflections/{self.source_lang}/{word}'
+            http_request = self.form_http_request(url)
+            response = await self.fetch_response(http_request)
+
+            if response['is_success']:
+                response = response['response']
+                lemmas = []
+                for lexical_entry in response['results'][0]['lexicalEntries']:
+                    inflection = lexical_entry['inflectionOf']
+                    root_form = inflection[0]['id']
+                    lemmas.append(root_form)
+
+                self.cache.set('lemmas', word, lemmas)
+                result['lemmas'] = lemmas
+
+            else:
+                result['lemmas'] = None
+                result['error'] = response['error']
+
+        return result
+
+    async def get_pronunciation(self, word: str) -> dict: 
+        """
+        >>> import asyncio
+        >>> loop = asyncio.new_event_loop()
+        >>> app_id = os.getenv('OXFORD_DICTIONARY_APP_ID')
+        >>> app_key = os.getenv('OXFORD_DICTIONARY_APP_KEY')
+        >>> api_base_url = 'https://od-api.oxforddictionaries.com/api/v1'
+        >>> dictionary = OxfordEngDict(api_base_url, app_id, app_key)
+        >>> print(dictionary.cache)
+        CacheInfo(hits=0, misses=0, currsets=0)
+        >>> loop.run_until_complete(dictionary.get_pronunciation('book'))
+        {'pronunciation': 'bʊk', 'error': None}
+        >>> print(dictionary.cache)
+        CacheInfo(hits=0, misses=1, currsets=1)
+        >>> loop.run_until_complete(dictionary.get_pronunciation('book'))
+        {'pronunciation': 'bʊk', 'error': None}
+        >>> print(dictionary.cache)
+        CacheInfo(hits=1, misses=1, currsets=1)
+        >>> print(dictionary.num_api_requests)
+        1
+        >>> loop.run_until_complete(dictionary.get_pronunciation('0.1a'))
+        {'pronunciation': None, 'error': <ErrorCodes.CANNOT_FIND_IN_DICT: 'cannot_find_in_dict'>}
+        >>> loop.close()
+        """
+        result = {
+            'pronunciation': self.cache.get('pronunciation', word),
+            'error': None
+        }
+
+        if result['pronunciation'] is self.cache.missing_value_sentinel:
             url = f'{self.api_base_url}/entries/{self.source_lang}/{word}'
-            http_request = HTTPRequest(
-                url,
-                method='GET',
-                headers={
-                    'app_id': self.app_id,
-                    'app_key': self.app_key
-                }
-            )
-            response = await self._make_request(http_request)
-            lexical_entries = response['results'][0]['lexicalEntries']
-            pronunciations = lexical_entries[0]['pronunciations']
-            information['spelling'] = pronunciations[0]['phoneticSpelling']
-            information['audio_file'] = pronunciations[0]['audioFile']
+            http_request = self.form_http_request(url)
+            response = await self.fetch_response(http_request)
 
-        except Exception as err:
-            logger.exception(err)
+            if response['is_success']:
+                response = response['response']
+                lexical_entries = response['results'][0]['lexicalEntries']
+                pronunciations = lexical_entries[0]['pronunciations']
+                pronunciation = pronunciations[0]['phoneticSpelling']
 
-        return information
+                self.cache.set('pronunciation', word, pronunciation)
+                result['pronunciation'] = pronunciation
 
-    async def get_word_phonetic_spelling(self, word, is_lemmatize=False):
-        logger.info(
-            f'Get word phonetic spelling: word={word}, '
-            f'source_lang={self.source_lang}, '
-            f'is_lemmatize={is_lemmatize}'
-        )
-        spelling = None
-        try:
-            if is_lemmatize:
-                word = await self._retrieve_root_form(word=word)
-            spelling = await self._retrieve_spelling(word=word)
+            else:
+                result['pronunciation'] = None
+                result['error'] = response['error']
 
-        except EntryNotFound as err:
-            logger.error(f'Get word phonetic spelling: word={word}, err={err}')
+        return result
 
-        return spelling
+    def form_http_request(self, url, method='get', headers=None):
+        _headers = {
+            'app_id': self.app_id,
+            'app_key': self.app_key
+        }
+        if headers is not None:
+            _headers.update(headers)
 
-    async def _retrieve_spelling(self, word):
-        word_id = word
-        url = f'{self.api_base_url}/entries/{self.source_lang}/{word_id}'
         http_request = HTTPRequest(
-            url,
-            method='GET',
-            headers={
-                'app_id': self.app_id,
-                'app_key': self.app_key
-            }
+            url, method=method.upper(), headers=_headers
         )
-        response = await self._make_request(http_request)
-        lexical_entries = response['results'][0]['lexicalEntries']
-        pronunciations = lexical_entries[0]['pronunciations']
-        spelling = pronunciations[0]['phoneticSpelling']
-        return spelling
+        return http_request
 
-    async def _retrieve_root_form(self, word):
-        word_id = word
-        url = f'{self.api_base_url}/inflections/{self.source_lang}/{word_id}'
-        http_request = HTTPRequest(
-            url,
-            method='GET',
-            headers={
-                'app_id': self.app_id,
-                'app_key': self.app_key
-            }
-        )
-        response = await self._make_request(http_request)
-        lexical_entries = response['results'][0]['lexicalEntries']
-        inflections = lexical_entries[0]['inflectionOf']
-        word_root_form = inflections[0]['id']
-        return word_root_form
+    async def fetch_response(self, http_request: HTTPRequest):
+        self.num_api_requests += 1
+        result = {'is_success': None, 'error': None, 'response': None}
 
-    async def _make_request(self, http_request: HTTPRequest):
         try:
             response: HTTPResponse = await self.async_http_client.fetch(
-                http_request
+                http_request,
+                # argument only affects the `HTTPError` raised 
+                # when a non-200 response code is
+                # used, instead of suppressing all errors.
+                raise_error=False
             )
-        except HTTPError as err:
-            if err.code == 404:
-                raise EntryNotFound(
-                    code=404,
-                    message=http_request.url,
-                    response=err.response
-                )
-            raise err
+        except Exception as err:
+            logger.exception(err)
+            result['is_success'] = False
+            result['error'] = str(err)
+            return result
 
         if response.code == 200:
-            return json.loads(response.body)
+            result['is_success'] = True
+            result['response'] = json.loads(response.body)
+
+        elif response.code == 404:
+            result['is_success'] = False
+            result['error'] = self.error_codes.CANNOT_FIND_IN_DICT
+
+        else:
+            result['is_success'] = False
+            result['error'] = response.body
+
+        if not result['is_success']:
+            logger.error(result)
+
+        return result
 
 
-class EntryNotFound(Exception):
+class Cache:
 
-    def __init__(self, code, message=None, response=None):
-        self.code = code
-        self.message = message
-        self.response = response
-        super(EntryNotFound, self).__init__(code, message, response)
+    def __init__(self):
+        # To-Do: Change dict to the sqlite database.
+        self._cache = {}
+        self.hits = 0
+        self.misses = 0
+        self.currsets = 0
+        self.missing_value_sentinel = object()
+
+    def get(self, method_tag, key):
+        res = self._cache.get(method_tag, {}).get(
+            key, self.missing_value_sentinel
+        )
+        if res is self.missing_value_sentinel:
+            self.misses += 1
+        else:
+            self.hits += 1
+        return res
+
+    def set(self, method_tag, key, value):
+        self._cache.setdefault(method_tag, {})[key] = value
+        self.currsets += 1
 
     def __str__(self):
-        return "Entry not found %d: %s" % (self.code, self.message)
+        return (
+            f'CacheInfo(hits={self.hits}, misses={self.misses}, '
+            f'currsets={self.currsets})'
+        )
+
+
+if __name__ == '__main__':
+    doctest.testmod(verbose=True)
