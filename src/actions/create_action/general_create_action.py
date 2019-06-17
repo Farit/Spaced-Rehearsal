@@ -58,7 +58,6 @@ class GeneralCreateAction(AbstractBaseAction):
         )
         if confirmed:
             await self.mediator.save_flashcard(flashcard)
-            await self.mediator.attach_audio_answer(flashcard)
             await self.mediator.print(
                 'Flashcard saved.',
                 bottom_margin=1,

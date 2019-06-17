@@ -6,6 +6,8 @@ import logging
 import urllib.parse
 import xml.sax.saxutils as xml_sax_utils
 
+from abc import ABC, abstractmethod
+
 from tornado.httpclient import (
     AsyncHTTPClient, HTTPRequest, HTTPResponse, HTTPError
 )
@@ -13,78 +15,59 @@ from tornado.httpclient import (
 logger = logging.getLogger(__name__)
 
 
-class TextToSpeech:
-    class Lang(enum.Enum):
-        ENG = 'english'
+class TextToSpeechAbstract(ABC):
 
-    def __init__(self, lang: Lang, config):
-        self.lang = lang
-        self.config = config
-        self.ibm_eng_tts = IbmEngTextToSpeech(config)
-        self.http_client = AsyncHTTPClient()
+    def __init__(self):
+        self.async_http_client = AsyncHTTPClient()
 
-    async def download_audio(self, url):
-        audio_file = None
-        try:
-            response: HTTPResponse = await self.http_client.fetch(url)
-            audio_file = response.body
+    @abstractmethod
+    async def check_connection(self) -> dict:
+        """
+        Varifies connection to the api with provided credentials. 
+        Returns on successful connection:
+            {'is_success': True, 'error': None}
+        Otherwise:
+            {'is_success': False, 'error': <error>}
+        """
+        pass
 
-        except HTTPError as err:
-            response: HTTPResponse = err.response
-            logger.exception(f'HTTP Error: {err}, response: {response.body}')
-
-        except socket.gaierror as err:
-            logger.warning(f'Socket Error: {err}')
-
-        except Exception as err:
-            logger.exception(f'Internal Error: {err}')
-
-        finally:
-            return audio_file
-
+    @abstractmethod
     async def synthesize_audio(self, text):
-        audio_file = None
-        log_prefix_msg = (
-            f'Synthesize audio for text={text}. '
-            f'lang={self.lang.value}.'
-        )
-        if self.lang == self.Lang.ENG:
-            logger.info(
-                f'{log_prefix_msg} '
-                f'Trying IBM English text to speech.'
-            )
+        pass
+        
 
-            if not self.ibm_eng_tts.is_in_service:
-                logger.info(
-                    f'{log_prefix_msg} '
-                    f'IBM English text to speech is out of service.'
-                )
-                return audio_file
-
-            audio_file = await self.ibm_eng_tts.synthesize_audio(text)
-            
-        return audio_file
-
-
-class IbmEngTextToSpeech:
+class IBM_EngTextToSpeech(TextToSpeechAbstract):
     """
     Docs: https://cloud.ibm.com/docs/services/text-to-speech/getting-started.html#gettingStarted
     """
 
-    def __init__(self, config):
-        self.config = config
-        self.api_base_url = self.config['text_to_speech'].get('ibm_api_url')
-        self.auth_username = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_USERNAME')
-        self.auth_password = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_PASSWORD')
-        self.http_client = AsyncHTTPClient()
+    def __init__(self, api_base_url, auth_username, auth_password):
+        super().__init__()
+        self.api_base_url = api_base_url
+        self.auth_username = auth_username
+        self.auth_password = auth_password
 
-    @property
-    def is_in_service(self):
-        return (
-                bool(self.auth_username) and
-                bool(self.auth_password) and
-                bool(self.api_base_url)
-        )
+    async def check_connection(self) -> dict:
+        """
+        Varifies connection to the api with provided credentials. 
+        Returns on successful connection:
+            {'is_success': True, 'error': None}
+        Otherwise:
+            {'is_success': False, 'error': <error>}
+        """
+        res = {'is_success': True, 'error': None}
+        
+        params = urllib.parse.urlencode({'voice': 'en-US_MichaelVoice'})
+        post_data = {'text': 'hello world'}
+        url = f'{self.api_base_url}?{params}'
+        http_request = self.form_http_request(url=url, body=post_data)
+        response = await self.fetch_response(http_request)
+
+        if not response['is_success']:
+            res['is_success'] = False
+            res['error'] = response['error']
+
+        return res
 
     async def synthesize_audio(self, text):
         params = urllib.parse.urlencode({'voice': 'en-US_MichaelVoice'})
@@ -105,33 +88,57 @@ class IbmEngTextToSpeech:
             </speak>
             '''
         }
+        url = f'{self.api_base_url}?{params}'
+        http_request = self.form_http_request(url=url, body=post_data)
+        response = await self.fetch_response(http_request)
+
+        if response['is_success']:
+            return response['response']
+
+    def form_http_request(self, url, method='post', headers=None, body=None):
+        _headers={
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mp3;rate=44100'
+        }
+        if headers is not None:
+            _headers.update(headers)
 
         http_request = HTTPRequest(
-            f'{self.api_base_url}?{params}',
-            method='POST',
+            url,
+            method=method.upper(),
             auth_username=self.auth_username,
             auth_password=self.auth_password,
-            headers={
-                'Content-Type': 'application/json',
-                'Accept': 'audio/mp3;rate=44100'
-            },
-            body=json.dumps(post_data)
+            headers=_headers,
+            body=json.dumps(body) if method.lower() == 'post' else None
         )
+        return http_request
 
-        audio_file = None
+    async def fetch_response(self, http_request: HTTPRequest):
+        result = {'is_success': None, 'error': None, 'response': None}
+
         try:
-            response: HTTPResponse = await self.http_client.fetch(http_request)
-            audio_file = response.body
-
-        except HTTPError as err:
-            response: HTTPResponse = err.response
-            logger.exception(f'HTTP Error: {err}, response: {response.body}')
-
-        except socket.gaierror as err:
-            logger.warning(f'Socket Error: {err}')
-
+            response: HTTPResponse = await self.async_http_client.fetch(
+                http_request,
+                # argument only affects the `HTTPError` raised 
+                # when a non-200 response code is
+                # used, instead of suppressing all errors.
+                raise_error=False
+            )
         except Exception as err:
-            logger.exception(f'Internal Error: {err}')
+            logger.exception(err)
+            result['is_success'] = False
+            result['error'] = str(err)
+            return result
 
-        finally:
-            return audio_file
+        if response.code == 200:
+            result['is_success'] = True
+            result['response'] = response.body
+
+        else:
+            result['is_success'] = False
+            result['error'] = response
+
+        if not result['is_success']:
+            logger.error(result)
+
+        return result
