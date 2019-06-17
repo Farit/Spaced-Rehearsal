@@ -2,4 +2,5 @@
 .cache
 .idea
 audio
+tmp
 *.db
