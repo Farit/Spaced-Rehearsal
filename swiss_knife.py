@@ -12,6 +12,7 @@ import site
 import time
 
 from datetime import datetime
+from collections import Counter
 
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +29,10 @@ from src.mediator import (
 from src.dictionary import (
     OxfordEngDict
 )
-from src.utils import log_config_as_dict, normalize_value
+from src.utils import (
+    log_config_as_dict,
+    normalize_eng_word
+)
 from src.config import ConfigAdapter
 
 
@@ -206,6 +210,25 @@ class SwissKnife:
         )
         await self.dump_data(file_path, data)
 
+    async def stat_english_flashcards(self, user):
+        logger.info('Stat english flashcards')
+        logger.info(f'User: {user}')
+
+        mediator = await self.setup_mediator(user, 'english')
+
+        number_of_flashcards = 0
+        words_counter = Counter()
+
+        flashcards = await mediator.get_flashcards()
+        for flashcard in flashcards:
+            number_of_flashcards += 1
+            for word in flashcard.answer.split():
+                words_counter[normalize_eng_word(word)] += 1
+
+        logger.info(f'Number of flashcards: {number_of_flashcards}')
+        logger.info(f'Number of words: {sum(words_counter.values())}')
+        logger.info(f'Number of unique words: {len(words_counter)}')
+
 
 def create_english_flashcards(args):
     loop = asyncio.get_event_loop()
@@ -223,6 +246,15 @@ def comb(args):
     loop.run_until_complete(SwissKnife(loop=loop).comb(args.file))
 
 
+def stat_english_flashcards(args):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(
+        SwissKnife(loop=loop).stat_english_flashcards(
+            user=args.user
+        )
+    )
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -238,6 +270,10 @@ if __name__ == '__main__':
     parser_comb = subparsers.add_parser('comb')
     parser_comb.add_argument('--file', required=True)
     parser_comb.set_defaults(func=comb)
+
+    parser_stat_eng_flashcards = subparsers.add_parser('stat-english-flashcards')
+    parser_stat_eng_flashcards.add_argument('--user', required=True)
+    parser_stat_eng_flashcards.set_defaults(func=stat_english_flashcards)
 
     args = parser.parse_args()
     args.func(args)

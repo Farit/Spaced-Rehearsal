@@ -122,6 +122,9 @@ class Mediator:
         )
         return flashcards
 
+    async def get_flashcards(self):
+        return self.db_session.get_flashcards(user_id=self.get_user_id())
+
     async def launch_search(self):
         result = await self.search_action.launch_search()
         return result

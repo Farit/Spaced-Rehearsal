@@ -440,6 +440,22 @@ class DBSession:
 
         return flashcard_container
 
+    def get_flashcards(self, user_id) -> FlashcardContainer:
+        flashcards = self._get_flashcards(
+            request=(
+                f'where user_id = :user_id AND '
+                f'      flashcard_type = :flashcard_type '
+            ),
+            request_params={
+                'user_id': user_id,
+                'flashcard_type': self.flashcard_type
+            }
+        )
+
+        flashcard_container = FlashcardContainer()
+        flashcard_container.extend(flashcards)
+        return flashcard_container
+
     def get_vis_by_date(self, user_id):
         query = self.db_cursor.execute(
             'SELECT '
