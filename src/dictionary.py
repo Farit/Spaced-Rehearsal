@@ -198,13 +198,19 @@ class OxfordEngDict(DictionaryAbstract):
             response = await self.fetch_response(http_request)
 
             if response['is_success']:
-                response = response['response']
-                lexical_entries = response['results'][0]['lexicalEntries']
-                pronunciations = lexical_entries[0]['pronunciations']
-                pronunciation = pronunciations[0]['phoneticSpelling']
+                try:
+                    response = response['response']
+                    lexical_entries = response['results'][0]['lexicalEntries']
+                    pronunciations = lexical_entries[0]['pronunciations']
+                    pronunciation = pronunciations[0]['phoneticSpelling']
 
-                self.cache.set('pronunciation', word, pronunciation)
-                result['pronunciation'] = pronunciation
+                    self.cache.set('pronunciation', word, pronunciation)
+                    result['pronunciation'] = pronunciation
+
+                except Exception as err:
+                    logger.exception(f'Error: {err}, Response: {response}')
+                    result['pronunciation'] = None
+                    result['error'] = str(err)
 
             else:
                 result['pronunciation'] = None
