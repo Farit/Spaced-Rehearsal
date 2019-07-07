@@ -4,7 +4,7 @@ import os.path
 
 from typing import List
 
-from src.mediator.base_mediator import Mediator
+from src.mediator.general_mediator import GeneralMediator
 from src.flashcard import Flashcard
 from src.media_player import Player
 from src.utils import get_human_readable_file_size, normalize_eng_word
@@ -16,7 +16,7 @@ from src.actions import (
 )
 
 
-class EnglishMediator(Mediator):
+class EnglishMediator(GeneralMediator):
 
     def __init__(self, dictionary=None, text_to_speech=None):
         super().__init__()

@@ -16,7 +16,7 @@ from src.utils import datetime_now
 from src.config import ConfigAdapter
 
 
-class Mediator:
+class GeneralMediator:
 
     def __init__(self):
         self.loop = None
@@ -37,7 +37,7 @@ class Mediator:
 
     @classmethod
     def name(cls):
-        raise NotImplemented
+        return 'general'
 
     def set_loop(self, loop):
         self.loop = loop

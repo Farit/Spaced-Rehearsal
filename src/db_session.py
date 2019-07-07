@@ -308,7 +308,7 @@ class DBSession:
             )
             flashcard.flashcard_id = self.db_cursor.lastrowid
 
-            for example in flashcard.examples:
+            for example in flashcard.examples or []:
                 self.db_cursor.execute(
                     'INSERT INTO flashcard_example(flashcard_id, example)'
                     'VALUES (:flashcard_id, :example)',

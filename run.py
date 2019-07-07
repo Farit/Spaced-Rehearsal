@@ -17,6 +17,7 @@ os.chdir(project_dir)
 
 from src.app import SpacedRehearsal
 from src.mediator import (
+    GeneralMediator,
     EnglishMediator
 )
 from src.dictionary import (
@@ -30,6 +31,12 @@ from src.config import ConfigAdapter
 
 
 logging.config.dictConfig(log_config_as_dict)
+
+
+def general_mediator(args):
+    mediator = GeneralMediator()
+    spaced_rehearsal = SpacedRehearsal(mediator=mediator)
+    spaced_rehearsal.run()
 
 
 def english_mediator(args):
@@ -85,6 +92,8 @@ def english_mediator(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.set_defaults(func=general_mediator)
+
     subparsers = parser.add_subparsers()
 
     english_mediator_parser = subparsers.add_parser('english-mediator')
