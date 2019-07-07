@@ -1,4 +1,4 @@
-### Program description
+## Program description
 
 The name of the program Spaced Rehearsal is one of the names of a learning 
 technique that exploits the spacing effect. It helps to learn or memorise 
@@ -14,7 +14,7 @@ browser and go to the **localhost:8888.**
 ![Alt Text](https://github.com/Farit/Spaced-Rehearsal/raw/master/review_demo.png)
 
 
-### Program requirements.
+## Program requirements.
 
 Program runs on python version 3.6 and above (``Python >= 3.6 ``).
 You should install additional packages in the requirements file.
@@ -23,9 +23,9 @@ You should install additional packages in the requirements file.
    python3.6 -m pip install -r requirements.txt
    ```
 
-### How to run the program?
+## How to run the program?
 
-# General functionality.
+### General functionality.
 
 By running the following command:
    ```
@@ -35,7 +35,7 @@ you start the program with general functionality. In this mode, you can create,
 alter, delete, search and review flashcards. All of your flashcards are saved
 in sqlite database (you can find database name in a configuration file)
 
-# English specific functionality.
+### English specific functionality.
 
 By starting the program with the following command:
    ```
@@ -48,7 +48,7 @@ the general functionality by providing additional fields for an answer
 pronunciation and ability to add an explanation for the flashcard.
 
 
-### Program enhancement.
+## Program enhancement.
 You can very easily add new mediator for your target language or any other 
 specific mediator for your needs by extending the base mediator. 
 You can look at English mediator for the example of how you can do it. 
