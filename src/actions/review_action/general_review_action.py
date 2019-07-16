@@ -42,10 +42,19 @@ class GeneralReviewAction(AbstractBaseAction):
             )
             await self.mediator.print(
                 f'Playing time: {review_stat.playing_time}',
+
                 f'{"Total".ljust(12)}: {str(review_stat.total).rjust(6)}',
-                f'{"Reviewed".ljust(12)}: {str(review_stat.reviewed).rjust(6)}',
-                f'{"Right".ljust(12)}: {str(review_stat.right).rjust(6)}',
-                f'{"Wrong".ljust(12)}: {str(review_stat.wrong).rjust(6)}',
+
+                f'{"Reviewed".ljust(12)}: '
+                f'{str(review_stat.reviewed).rjust(6)}',
+
+                f'{"Right".ljust(12)}: '
+                f'{str(review_stat.right).rjust(6)} '
+                f'({review_stat.right_percent}%)',
+
+                f'{"Wrong".ljust(12)}: '
+                f'{str(review_stat.wrong).rjust(6)} '
+                f'({review_stat.wrong_percent}%)',
                 bottom_margin=1
             )
 
@@ -255,6 +264,18 @@ class ReviewStat:
         self.reviewed = 0
         self.right = 0
         self.wrong = 0
+
+    @property
+    def right_percent(self):
+        if self.reviewed:
+            return  round((self.right * 100) / self.reviewed)
+        return 0
+
+    @property
+    def wrong_percent(self):
+        if self.reviewed:
+            return  round((self.wrong * 100) / self.reviewed)
+        return 0
 
     @property
     def playing_time(self):
