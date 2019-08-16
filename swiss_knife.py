@@ -136,7 +136,10 @@ class SwissKnife:
             app_id = os.getenv('OXFORD_DICTIONARY_APP_ID')
             app_key = os.getenv('OXFORD_DICTIONARY_APP_KEY')
             api_base_url = config['dictionary']['oxford_dict_api_base_url']
-            dictionary = OxfordEngDict(api_base_url, app_id, app_key)
+            dictionary = OxfordEngDict(
+                api_base_url, app_id, app_key,
+                dictionary_db_path=config['dictionary']['dict_database']
+            )
 
             res = await dictionary.check_connection()
             if not res['is_success']:

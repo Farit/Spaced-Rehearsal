@@ -50,7 +50,8 @@ def english_mediator(args):
         dictionary = OxfordEngDict(
             api_base_url=api_base_url,
             app_id=app_id,
-            app_key=app_key
+            app_key=app_key,
+            dictionary_db_path=config['dictionary']['dict_database']
         )
 
         loop = asyncio.new_event_loop()

@@ -42,6 +42,11 @@ class EnglishMediator(GeneralMediator):
     def make_alter_action(self):
         return EnglishAlterAction(mediator=self)
 
+    async def exit(self):
+        await super().exit()
+        if self.dictionary:
+            await self.dictionary.close()
+
     async def update_flashcard(self, flashcard: Flashcard):
         await super().update_flashcard(flashcard=flashcard)
         self._remove_audio_pronunciation(flashcard)
