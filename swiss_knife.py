@@ -195,6 +195,7 @@ class SwissKnife:
         data = await self.load_data(file_path)
         data.sort(
             key=lambda d: (
+                d.get('answer', ''), d.get('question', ''),
                 d.get('is_ready_to_add', False), d.get('created', False)
             )
         )
