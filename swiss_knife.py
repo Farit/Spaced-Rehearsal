@@ -79,7 +79,7 @@ class SwissKnife:
                         })
                         continue
 
-                    phonetic_transcription = await mediator.get_pronunciation(
+                    phonetic_transcription = await mediator.dictionary.get_text_pronunciation(
                         datum['answer']
                     )
                         
