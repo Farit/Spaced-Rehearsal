@@ -1,2 +1,3 @@
 python-vlc
 tornado>=5.0.2
+nltk>=3.4.5
