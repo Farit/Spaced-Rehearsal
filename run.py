@@ -58,10 +58,11 @@ def english_mediator(args):
         res = loop.run_until_complete(dictionary.check_connection())
         loop.close()
         if not res['is_success']:
-            sys.exit(
+            print(
                 'Oxford dictionary API connection check failed.\n'
                 'Please verify your internet connection or api credentials.'
             )
+            dictionary = None
 
     text_to_speech = None
     if args.text_to_speech == 'ibm':
@@ -78,10 +79,11 @@ def english_mediator(args):
         res = loop.run_until_complete(text_to_speech.check_connection())
         loop.close()
         if not res['is_success']:
-            sys.exit(
+            print(
                 'IBM text to speech API connection check failed.\n'
                 'Please verify your internet connection or api credentials.'
             )
+            text_to_speech = None
 
     mediator = EnglishMediator(
         dictionary=dictionary,
