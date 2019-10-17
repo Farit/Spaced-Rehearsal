@@ -78,24 +78,15 @@ class GeneralReviewAction(AbstractBaseAction):
         )
         current_review_timestamp = datetime_now()
 
-        await self.mediator.print(
-            f'{self.mediator.format_grey("Question")}: '
-            f'{flashcard.question}'
-        )
-        entered_answer = await self.mediator.input_answer()
+        session_res = await self.do_review_session(flashcard)
+        if session_res['edit_dist'] != 0:
+            await self.mediator.print(
+                f'Oops! Wrong! You have one more attempt.',
+                red=True
+            )
+            session_res = await self.do_review_session(flashcard)
 
-        entered_answer = normalize_value(
-            entered_answer, remove_trailing='.', to_lower=True
-        )
-        answer_side = normalize_value(
-            flashcard.answer, remove_trailing='.', to_lower=True
-        )
-
-        edit_dist, entered_ans_alignment, ans_side_alignment = (
-            self.compute_edit_distance(entered_answer, answer_side)
-        )
-
-        if edit_dist == 0:
+        if session_res['edit_dist'] == 0:
             flashcard.review_timestamp = FlashcardScheduler.to_next(
                 flashcard_answer=flashcard.answer,
                 previous_review_timestamp=previous_review_timestamp
@@ -111,8 +102,13 @@ class GeneralReviewAction(AbstractBaseAction):
             colour_func = self.mediator.format_red
             current_result = 'failure'
 
-            await self.mediator.print(entered_ans_alignment)
-            await self.mediator.print(ans_side_alignment, bottom_margin=1)
+            await self.mediator.print(
+                session_res['entered_ans_alignment']
+            )
+            await self.mediator.print(
+                session_res['ans_side_alignment'],
+                bottom_margin=1
+            )
 
         flashcard.review_version += 1
 
@@ -134,6 +130,30 @@ class GeneralReviewAction(AbstractBaseAction):
             next_review_version=flashcard.review_version,
         )
         review_stat.inc_reviewed()
+
+    async def do_review_session(self, flashcard: Flashcard):
+        await self.mediator.print(
+            f'{self.mediator.format_grey("Question")}: '
+            f'{flashcard.question}'
+        )
+        entered_answer = await self.mediator.input_answer()
+
+        entered_answer = normalize_value(
+            entered_answer, remove_trailing='.', to_lower=True
+        )
+        answer_side = normalize_value(
+            flashcard.answer, remove_trailing='.', to_lower=True
+        )
+
+        edit_dist, entered_ans_alignment, ans_side_alignment = (
+            self.compute_edit_distance(entered_answer, answer_side)
+        )
+        res = {
+            "edit_dist": edit_dist,
+            "entered_ans_alignment": entered_ans_alignment,
+            "ans_side_alignment": ans_side_alignment
+        }
+        return res
 
     def compute_edit_distance(self, first_str, second_str):
         """
