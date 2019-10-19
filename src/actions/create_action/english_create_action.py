@@ -18,29 +18,20 @@ logger = logging.getLogger(__name__)
 
 class EnglishCreateAction(GeneralCreateAction):
 
-    async def _create_flashcard(self):
-        question = await self.mediator.input_question()
-        answer = await self.mediator.input_answer()
-        source = await self.mediator.input_source()
-        phonetic_transcription = (
+    async def _collect_data(self):
+        data = {}
+        data['question'] = await self.mediator.input_question()
+        data['answer'] = await self.mediator.input_answer()
+
+        data['source'] = await self.mediator.input_source()
+        data['phonetic_transcription'] = (
             await self.mediator.input_phonetic_transcription(
-                flashcard_answer=answer
+                flashcard_answer=data['answer']
             )
         )
-        explanation = await self.mediator.input_explanation()
-        examples = await self.mediator.input_examples()
-
-        flashcard: Flashcard = Flashcard.create(
-            user_id=self.mediator.get_user_id(),
-            flashcard_type=self.mediator.name(),
-            question=question,
-            answer=answer,
-            source=source,
-            phonetic_transcription=phonetic_transcription,
-            explanation=explanation,
-            examples=examples
-        )
-        return flashcard
+        data['explanation'] = await self.mediator.input_explanation()
+        data['examples'] = await self.mediator.input_examples()
+        return data
 
 
 class EnglishRussianCreateAction(GeneralCreateAction):
@@ -49,32 +40,27 @@ class EnglishRussianCreateAction(GeneralCreateAction):
         super().__init__(mediator)
         self.async_http_client = AsyncHTTPClient()
 
-    async def _create_flashcard(self):
-        answer = await self.mediator.input_answer(label='English answer')
-        rus_translation = await self.translate(answer)
-        question = await self.mediator.input_question(
+    async def _collect_data(self):
+        data = {}
+        data['answer'] = await self.mediator.input_answer(label='English answer')
+
+        rus_translation = None
+        if data['answer']:
+            rus_translation = await self.translate(data['answer'])
+
+        data['question'] = await self.mediator.input_question(
             label='Russian question', pre_fill=rus_translation
         )
-        source = await self.mediator.input_source()
+
+        data['source'] = await self.mediator.input_source()
         phonetic_transcription = (
             await self.mediator.input_phonetic_transcription(
-                flashcard_answer=answer
+                flashcard_answer=data['answer']
             )
         )
-        explanation = await self.mediator.input_explanation()
-        examples = await self.mediator.input_examples()
-
-        flashcard: Flashcard = Flashcard.create(
-            user_id=self.mediator.get_user_id(),
-            flashcard_type=self.mediator.name(),
-            question=question,
-            answer=answer,
-            source=source,
-            phonetic_transcription=phonetic_transcription,
-            explanation=explanation,
-            examples=examples
-        )
-        return flashcard
+        data['explanation'] = await self.mediator.input_explanation()
+        data['examples'] = await self.mediator.input_examples()
+        return data
 
     async def translate(self, text):
         url = 'https://translate.yandex.net/api/v1.5/tr.json/translate'

@@ -12,7 +12,26 @@ class GeneralCreateAction(AbstractBaseAction):
         await super().launch()
 
         await self.mediator.print(f'Creating New Flashcard', bold=True)
-        flashcard = await self._create_flashcard()
+        data = await self._collect_data()
+
+        if not data.get('answer') or not data.get('question'):
+            await self.mediator.print(
+                'Aborting creation. Either answer or question is empty.',
+                bottom_margin=1,
+                red=True
+            )
+            return
+
+        flashcard: Flashcard = Flashcard.create(
+            user_id=self.mediator.get_user_id(),
+            flashcard_type=self.mediator.name(),
+            question=data.get('question'),
+            answer=data.get('answer'),
+            source=data.get('source'),
+            phonetic_transcription=data.get('phonetic_transcription'),
+            explanation=data.get('explanation'),
+            examples=data.get('examples')
+        )
 
         duplicates: FlashcardContainer = await self.mediator.search_flashcard(
             flashcard.answer,
@@ -80,17 +99,9 @@ class GeneralCreateAction(AbstractBaseAction):
                 red=True
             )
 
-    async def _create_flashcard(self):
-        question = await self.mediator.input_question()
-        answer = await self.mediator.input_answer()
-        source = await self.mediator.input_source()
-
-        flashcard: Flashcard = Flashcard.create(
-            user_id=self.mediator.get_user_id(),
-            flashcard_type=self.mediator.name(),
-            question=question,
-            answer=answer,
-            source=source
-        )
-        return flashcard
-
+    async def _collect_data(self):
+        data = {}
+        data['question'] = await self.mediator.input_question()
+        data['answer'] = await self.mediator.input_answer()
+        data['source'] = await self.mediator.input_source()
+        return data
