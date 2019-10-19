@@ -273,16 +273,12 @@ class GeneralMediator:
         )
         return data
 
-    async def input_question(self, pre_fill: str=None):
-        question = await self.input(
-            'Question', pre_fill=pre_fill
-        )
+    async def input_question(self, label='Question', pre_fill: str=None):
+        question = await self.input(label, pre_fill=pre_fill)
         return question
 
-    async def input_answer(self, pre_fill: str=None):
-        answer = await self.input(
-            'Answer', pre_fill=pre_fill
-        )
+    async def input_answer(self, label='Answer', pre_fill: str=None):
+        answer = await self.input(label, pre_fill=pre_fill)
         return answer
 
     async def input_source(self, pre_fill: str=None):

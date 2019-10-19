@@ -18,7 +18,8 @@ os.chdir(project_dir)
 from src.app import SpacedRehearsal
 from src.mediator import (
     GeneralMediator,
-    EnglishMediator
+    EnglishMediator,
+    EnglishRussianMediator
 )
 from src.dictionary import (
     OxfordEngDict
@@ -33,15 +34,8 @@ from src.config import ConfigAdapter
 logging.config.dictConfig(log_config_as_dict)
 
 
-def general_mediator(args):
-    mediator = GeneralMediator()
-    spaced_rehearsal = SpacedRehearsal(mediator=mediator)
-    spaced_rehearsal.run()
-
-
-def english_mediator(args):
+def get_dictionary(args: argparse.Namespace):
     config = ConfigAdapter(filename='config.cfg')
-
     dictionary = None
     if args.dictionary == 'oxford':
         app_id = os.getenv('OXFORD_DICTIONARY_APP_ID')
@@ -63,7 +57,11 @@ def english_mediator(args):
                 'Please verify your internet connection or api credentials.'
             )
             dictionary = None
+    return dictionary
 
+
+def get_text_to_speech(args: argparse.Namespace):
+    config = ConfigAdapter(filename='config.cfg')
     text_to_speech = None
     if args.text_to_speech == 'ibm':
         auth_username = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_USERNAME')
@@ -84,10 +82,28 @@ def english_mediator(args):
                 'Please verify your internet connection or api credentials.'
             )
             text_to_speech = None
+    return text_to_speech
 
+
+def general_mediator(args: argparse.Namespace):
+    mediator = GeneralMediator()
+    spaced_rehearsal = SpacedRehearsal(mediator=mediator)
+    spaced_rehearsal.run()
+
+
+def english_mediator(args: argparse.Namespace):
     mediator = EnglishMediator(
-        dictionary=dictionary,
-        text_to_speech=text_to_speech
+        dictionary=get_dictionary(args),
+        text_to_speech=get_text_to_speech(args)
+    )
+    spaced_rehearsal = SpacedRehearsal(mediator=mediator)
+    spaced_rehearsal.run()
+
+
+def eng_rus_mediator(args: argparse.Namespace):
+    mediator = EnglishRussianMediator(
+        dictionary=get_dictionary(args),
+        text_to_speech=get_text_to_speech(args)
     )
     spaced_rehearsal = SpacedRehearsal(mediator=mediator)
     spaced_rehearsal.run()
@@ -103,6 +119,11 @@ if __name__ == '__main__':
     english_mediator_parser.add_argument('--dictionary', choices=['oxford'])
     english_mediator_parser.add_argument('--text-to-speech', choices=['ibm'])
     english_mediator_parser.set_defaults(func=english_mediator)
+
+    eng_rus_mediator_parser = subparsers.add_parser('eng-rus-mediator')
+    eng_rus_mediator_parser.add_argument('--dictionary', choices=['oxford'])
+    eng_rus_mediator_parser.add_argument('--text-to-speech', choices=['ibm'])
+    eng_rus_mediator_parser.set_defaults(func=eng_rus_mediator)
 
     args = parser.parse_args()
     args.func(args)

@@ -12,6 +12,7 @@ from src.utils import get_human_readable_file_size, normalize_eng_word
 from src.actions import (
     EnglishReviewAction,
     EnglishCreateAction,
+    EnglishRussianCreateAction,
     EnglishAlterAction,
 )
 
@@ -125,10 +126,8 @@ class EnglishMediator(GeneralMediator):
         )
         return phonetic_transcription
 
-    async def input_explanation(self, pre_fill: str=None):
-        explanation = await self.input(
-            'Explanation', pre_fill=pre_fill
-        )
+    async def input_explanation(self, label='Explanation', pre_fill: str=None):
+        explanation = await self.input(label, pre_fill=pre_fill)
         return explanation
 
     async def input_examples(self, data: List[str]=None):
@@ -146,3 +145,9 @@ class EnglishMediator(GeneralMediator):
                 break
 
         return examples
+
+
+class EnglishRussianMediator(EnglishMediator):
+
+    def make_create_action(self):
+        return EnglishRussianCreateAction(mediator=self)
