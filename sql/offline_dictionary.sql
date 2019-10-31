@@ -1,7 +1,9 @@
 
-CREATE TABLE IF NOT EXISTS dictionary_cache(
+CREATE TABLE IF NOT EXISTS offline_dictionary(
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     lang CHARACTER VARYING(2048) NOT NULL,
+    field TEXT,
+    grammatical_feature TEXT,
     key TEXT NOT NULL,
     value TEXT NOT NULL,
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL

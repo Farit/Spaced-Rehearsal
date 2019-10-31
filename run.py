@@ -29,6 +29,7 @@ from src.text_to_speech import (
 )
 from src.utils import log_config_as_dict
 from src.config import ConfigAdapter
+from src.formatting import Formatting
 
 
 logging.config.dictConfig(log_config_as_dict)
@@ -52,10 +53,12 @@ def get_dictionary(args: argparse.Namespace):
         res = loop.run_until_complete(dictionary.check_connection())
         loop.close()
         if not res['is_success']:
-            print(
+            formatting = Formatting()
+            msg = formatting.red(
                 'Oxford dictionary API connection check failed.\n'
                 'Please verify your internet connection or api credentials.'
             )
+            print(msg)
             dictionary = None
     return dictionary
 
@@ -77,10 +80,12 @@ def get_text_to_speech(args: argparse.Namespace):
         res = loop.run_until_complete(text_to_speech.check_connection())
         loop.close()
         if not res['is_success']:
-            print(
+            formatting = Formatting()
+            msg = formatting.red(
                 'IBM text to speech API connection check failed.\n'
                 'Please verify your internet connection or api credentials.'
             )
+            print(msg)
             text_to_speech = None
     return text_to_speech
 

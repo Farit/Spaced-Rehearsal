@@ -27,8 +27,9 @@ class Formatting:
         [4] http://en.wikipedia.org/wiki/Control_character#Display
 
     Examples:
-        TermColor.red('hello')
-        TermColor.red('hello', is_escape_seq=True)
+        formatting = Formatting()
+        formatting.red('hello')
+        formatting.red('hello', is_escape_seq=True)
 
     """
     RED = '\033[31m'
@@ -47,40 +48,40 @@ class Formatting:
 
     def green(self, text, is_escape_seq=False):
         return self._wrap(text, colour=self.GREEN, is_escape_seq=is_escape_seq)
-        
+
     def yellow(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.YELLOW, is_escape_seq=is_escape_seq
+            text, colour=self.YELLOW, is_escape_seq=is_escape_seq
         )
 
     def blue(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.BLUE, is_escape_seq=is_escape_seq
+            text, colour=self.BLUE, is_escape_seq=is_escape_seq
         )
 
     def light_blue(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.LIGHT_BLUE, is_escape_seq=is_escape_seq
+            text, colour=self.LIGHT_BLUE, is_escape_seq=is_escape_seq
         )
 
     def purple(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.PURPLE, is_escape_seq=is_escape_seq
+            text, colour=self.PURPLE, is_escape_seq=is_escape_seq
         )
 
     def grey(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.GREY, is_escape_seq=is_escape_seq
+            text, colour=self.GREY, is_escape_seq=is_escape_seq
         )
 
     def bold(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.BOLD, is_escape_seq=is_escape_seq
+            text, colour=self.BOLD, is_escape_seq=is_escape_seq
         )
 
     def underline(self, text, is_escape_seq=False):
         return self._wrap(
-                text, colour=self.UNDERLINE, is_escape_seq=is_escape_seq
+            text, colour=self.UNDERLINE, is_escape_seq=is_escape_seq
         )
 
     def _wrap(self, text, *, colour, is_escape_seq=False):

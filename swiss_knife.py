@@ -151,7 +151,7 @@ class SwissKnife:
             mediator = EnglishMediator(dictionary=dictionary)
             is_login = await mediator.login_user(user)
             if not is_login:
-                sys.exit(f'Failed to login user: {self.user}')
+                sys.exit(f'Failed to login user: {user}')
 
             mediator.set_loop(self.loop)
             return mediator
