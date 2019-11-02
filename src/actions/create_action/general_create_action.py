@@ -33,10 +33,14 @@ class GeneralCreateAction(AbstractBaseAction):
             examples=data.get('examples')
         )
 
-        duplicates: FlashcardContainer = await self.mediator.search_flashcard(
-            flashcard.answer,
-            flashcard.question
+        duplicates: FlashcardContainer = (
+            await self.mediator.search_flashcard(flashcard.answer)
         )
+        question_duplicates: FlashcardContainer = (
+            await self.mediator.search_flashcard(flashcard.question)
+        )
+        duplicates.extend(question_duplicates)
+
         for duplicate in duplicates:
             await self.mediator.print(
                 f'Possible duplicate',
