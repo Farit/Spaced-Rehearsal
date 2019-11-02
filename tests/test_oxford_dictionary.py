@@ -582,6 +582,14 @@ def test_oxford_eng_dict__construct_compound_word_pronunciation():
 
     # Final 's/es' is pronounced /z/ after a voiced consonant or vowel.
     word_pronunciation = OxfordEngDict._construct_compound_word_pronunciation(
+        word='chairs',
+        lemma='chair',
+        lemma_pronunciation='tʃɛː',
+        word_treebank_pos='NNS'
+    )
+    assert word_pronunciation == 'tʃɛːz'
+
+    word_pronunciation = OxfordEngDict._construct_compound_word_pronunciation(
         word='ribs',
         lemma='rib',
         lemma_pronunciation='rɪb',

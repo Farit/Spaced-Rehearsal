@@ -210,15 +210,17 @@ class OxfordEngDict(DictionaryAbstract):
                 return result
 
             lemma = get_lemmas_res['lemmas'][0]
+            lemma_pronunciation = None
             if lemma and treebank_pos is not None:
                 res = await self.get_word_pronunciation(lemma)
-                if res['pronunciation'] is None:
+                lemma_pronunciation = res['pronunciation']
+                if lemma_pronunciation is None:
                     return result
 
                 word_pronunciation = self._construct_compound_word_pronunciation(
                     word=word,
                     lemma=lemma,
-                    lemma_pronunciation=res['pronunciation'],
+                    lemma_pronunciation=lemma_pronunciation,
                     word_treebank_pos=treebank_pos
                 )
                 if word_pronunciation:
@@ -240,7 +242,7 @@ class OxfordEngDict(DictionaryAbstract):
             err_msg = (
                 f'Get word pronunciation error: word={word}, '
                 f'oxford_pos={oxford_pos}, treebank_pos={treebank_pos}, '
-                f'result={result}'
+                f'result={result}, lemma_pronunciation={lemma_pronunciation}'
             )
             logger.error(err_msg)
             return result
@@ -417,7 +419,7 @@ class OxfordEngDict(DictionaryAbstract):
                 lemma_pronunciation[-2:] in (
                     'dʒ',
                     'iː', 'uː', 'ɪə', 'ʊə', 'eɪ', 'əʊ', 'ɔɪ', 'ɔː',
-                    'aʊ', 'ʌɪ', 'ɑː', 'əː'
+                    'aʊ', 'ʌɪ', 'ɑː', 'əː', 'ɛː'
                 )
             ):
                 return lemma_pronunciation + 'd'
@@ -449,7 +451,7 @@ class OxfordEngDict(DictionaryAbstract):
                 or
                 lemma_pronunciation[-2:] in (
                     'iː', 'uː', 'ɪə', 'ʊə', 'eɪ', 'əʊ', 'ɔɪ', 'ɔː',
-                    'aʊ', 'ʌɪ', 'ɑː', 'əː'
+                    'aʊ', 'ʌɪ', 'ɑː', 'əː', 'ɛː'
                 )
             ):
                 return lemma_pronunciation + 'z'
