@@ -23,6 +23,7 @@ You should install additional packages in the requirements file.
 
    ```
    python3.6 -m pip install -r requirements.txt
+   python3.6 -m nltk.downloader punkt averaged_perceptron_tagger
    ```
 
 ## How to run the program?
