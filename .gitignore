@@ -5,6 +5,7 @@
 .idea
 .pytest_cache
 .vscode
+.mypy_cache
 audio
 tmp
 *.db
