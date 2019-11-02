@@ -34,11 +34,21 @@ class OfflineDict:
             self.db_cursor.execute(table)
             self.db_conn.commit()
 
+        self.set(
+            key='has', value='həz', field='pronunciation',
+            grammatical_feature='verb'
+        )
+        self.set(
+            key='has', value='həz', field='pronunciation'
+        )
+
     async def close(self):
         self.db_cursor.close()
         self.db_conn.close()
 
     def get(self, key, field=None, grammatical_feature=None):
+        key = key.lower()
+
         field = (
             OfflineDictFields(field).value
             if field is not None else None
@@ -52,21 +62,25 @@ class OfflineDict:
             self.db_cursor.execute(
                 f'SELECT * '
                 f'FROM {self.db_name} '
-                f'WHERE lang=? and key=?',
+                f'WHERE lang=? and key=?'
+                f' and field is null'
+                f' and grammatical_feature is null',
                 (self.lang, key)
             )
         elif field is not None and grammatical_feature is None:
             self.db_cursor.execute(
                 f'SELECT * '
                 f'FROM {self.db_name} '
-                f'WHERE lang=? and key=? and field=?',
+                f'WHERE lang=? and key=? and field=?'
+                f' and grammatical_feature is null',
                 (self.lang, key, field)
             )
         elif field is None and grammatical_feature is not None:
             self.db_cursor.execute(
                 f'SELECT * '
                 f'FROM {self.db_name} '
-                f'WHERE lang=? and key=? and grammatical_feature=?',
+                f'WHERE lang=? and key=? and grammatical_feature=?'
+                f' and field is null',
                 (self.lang, key, grammatical_feature)
             )
         else:
@@ -86,6 +100,8 @@ class OfflineDict:
         return json.loads(res['value'])['value']
 
     def set(self, key, value, field=None, grammatical_feature=None):
+        key = key.lower()
+
         field = (
             OfflineDictFields(field).value
             if field is not None else None
@@ -157,7 +173,9 @@ class OfflineDict:
                     self.db_cursor.execute(
                         f'UPDATE {self.db_name} '
                         f'set value=:value '
-                        f'where key=:key and lang=:lang',
+                        f'where key=:key and lang=:lang'
+                        f' and field is null'
+                        f' and grammatical_feature is null',
                         {
                             'lang': self.lang,
                             'key': key,
@@ -168,7 +186,8 @@ class OfflineDict:
                     self.db_cursor.execute(
                         f'UPDATE {self.db_name} '
                         f'set value=:value '
-                        f'where key=:key and field=:field and lang=:lang',
+                        f'where key=:key and field=:field and lang=:lang'
+                        f' and grammatical_feature is null',
                         {
                             'lang': self.lang,
                             'key': key,
@@ -181,7 +200,8 @@ class OfflineDict:
                         f'UPDATE {self.db_name} '
                         f'set value=:value '
                         f'where key=:key and lang=:lang and '
-                        f'grammatical_feature=:grammatical_feature',
+                        f'grammatical_feature=:grammatical_feature'
+                        f' and field is null',
                         {
                             'lang': self.lang,
                             'key': key,
