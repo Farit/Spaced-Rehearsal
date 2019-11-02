@@ -53,7 +53,7 @@ class EnglishRussianCreateAction(GeneralCreateAction):
         )
 
         data['source'] = await self.mediator.input_source()
-        phonetic_transcription = (
+        data['phonetic_transcription'] = (
             await self.mediator.input_phonetic_transcription(
                 flashcard_answer=data['answer']
             )
