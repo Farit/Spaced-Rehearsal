@@ -34,14 +34,6 @@ class OfflineDict:
             self.db_cursor.execute(table)
             self.db_conn.commit()
 
-        self.set(
-            key='has', value='həz', field='pronunciation',
-            grammatical_feature='verb'
-        )
-        self.set(
-            key='has', value='həz', field='pronunciation'
-        )
-
     async def close(self):
         self.db_cursor.close()
         self.db_conn.close()
