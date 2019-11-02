@@ -32,13 +32,17 @@ class AsyncStdIO:
 
     @staticmethod
     def blocking_input(prompt, pre_fill='', history=None):
+        pre_fill = '' if pre_fill is None else pre_fill
         def startup_hook():
             readline.insert_text(pre_fill)
 
             if history is not None:
                 readline.clear_history()
-            for line in history or []:
-                readline.add_history(line)
+                _history = (
+                    history if isinstance(history, list) else [str(history)]
+                )
+                for line in _history:
+                    readline.add_history(str(line))
 
         readline.set_startup_hook(startup_hook)
         try:

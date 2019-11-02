@@ -12,7 +12,7 @@ from src.flashcard import Flashcard, FlashcardContainer
 from src.db_session import DBSession
 from src.async_std_io import AsyncStdIO
 from src.formatting import Formatting
-from src.utils import datetime_now
+from src.utils import datetime_now, normalize_value
 from src.config import ConfigAdapter
 
 
@@ -292,4 +292,6 @@ class GeneralMediator:
             ),
             history=source_tags
         )
+        source = normalize_value(value=source, remove_trailing='.')
+        source = source.capitalize() + '.'
         return source

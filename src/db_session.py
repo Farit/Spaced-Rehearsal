@@ -492,6 +492,22 @@ class DBSession:
                 )
         return data
 
+    def get_recent_explanations(self, user_id, limit=1):
+        query = self.db_cursor.execute(
+            'SELECT explanation '
+            'FROM flashcards '
+            'WHERE user_id = :user_id and flashcard_type = :flashcard_type '
+            'ORDER BY created desc '
+            'LIMIT :limit;',
+            {
+                'user_id': user_id,
+                'flashcard_type': self.flashcard_type,
+                'limit': limit
+            }
+        )
+        recent_explanations = [row['explanation'] for row in query]
+        return recent_explanations
+
     def get_source_tags(self, user_id):
         query = self.db_cursor.execute(
             'SELECT distinct(source) as tag '

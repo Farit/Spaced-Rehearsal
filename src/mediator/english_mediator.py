@@ -127,7 +127,13 @@ class EnglishMediator(GeneralMediator):
         return phonetic_transcription
 
     async def input_explanation(self, label='Explanation', pre_fill: str=None):
-        explanation = await self.input(label, pre_fill=pre_fill)
+        recent_explanations = self.db_session.get_recent_explanations(
+            user_id=self.get_user_id()
+        )
+
+        explanation = await self.input(
+            label, pre_fill=pre_fill, history=recent_explanations
+        )
         return explanation
 
     async def input_examples(self, data: List[str]=None):
