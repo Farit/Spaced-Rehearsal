@@ -525,7 +525,7 @@ class DBSession:
             if tag:
                 tag = normalize_value(value=tag, remove_trailing='.')
                 source_tags.append(tag.capitalize() + '.')
-
+        source_tags.sort(reverse=True)
         return source_tags
 
     def get_prev_review_timestamp(self, flashcard):
