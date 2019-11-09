@@ -22,6 +22,7 @@ class HorizontalBarByDate {
 
     render(data){
         this.svg_width = this.el.parentNode.offsetWidth;
+        this.svg_real_width = this.svg_width + 100;
         this.svg_height = (
             this.margin.top + this.margin.bottom +
             2 * this.barPaddingOuter +
@@ -65,7 +66,7 @@ class HorizontalBarByDate {
         var self = this;
         this.svg = d3.select(this.el).append("svg")
             .attr("width", function(){
-                return self.svg_width;
+                return self.svg_real_width;
             })
             .attr("height", function(){
                 return self.svg_height
