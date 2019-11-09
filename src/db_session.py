@@ -494,11 +494,13 @@ class DBSession:
 
     def get_recent_explanations(self, user_id, limit=1):
         query = self.db_cursor.execute(
-            'SELECT explanation '
-            'FROM flashcards '
-            'WHERE user_id = :user_id and flashcard_type = :flashcard_type '
-            'ORDER BY created desc '
-            'LIMIT :limit;',
+            "SELECT explanation "
+            "FROM flashcards "
+            "WHERE user_id = :user_id and flashcard_type = :flashcard_type "
+            "      and explanation is not null "
+            "      and explanation != '' "
+            "ORDER BY created desc "
+            "LIMIT :limit;",
             {
                 'user_id': user_id,
                 'flashcard_type': self.flashcard_type,
