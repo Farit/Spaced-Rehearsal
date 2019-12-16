@@ -36,12 +36,16 @@ class Formatting:
     GREEN = '\033[32m'
     YELLOW = '\033[33m'
     BLUE = '\033[34m'
+    WHITE = '\033[37m'
     LIGHT_BLUE = '\033[1;34m'
     PURPLE = '\033[35m'
     GREY = '\033[1;30m'
     END = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+    def white(self, text, is_escape_seq=False):
+        return self._wrap(text, colour=self.WHITE, is_escape_seq=is_escape_seq)
 
     def red(self, text, is_escape_seq=False):
         return self._wrap(text, colour=self.RED, is_escape_seq=is_escape_seq)

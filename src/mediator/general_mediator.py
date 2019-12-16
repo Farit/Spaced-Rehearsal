@@ -197,10 +197,8 @@ class GeneralMediator:
         grey: bool=False,
         bold: bool=False,
         underline: bool=False,
-        bottom_margin: int=None
+        bottom_margin: int=0
     ):
-        bottom_margin = bottom_margin or 0
-
         if red:
             msgs = [self.format_red(msg) for msg in msgs]
         if grey:
@@ -220,8 +218,7 @@ class GeneralMediator:
         if underline:
             msgs = [self.format_underline(msg) for msg in msgs]
         
-        msgs = [*msgs, *['']*bottom_margin]
-        await self.async_std_io.print(*msgs)
+        await self.async_std_io.print(*msgs, bottom_margin=bottom_margin)
 
     def format_green(self, msg: str) -> str:
         return self.formatting.green(msg)
