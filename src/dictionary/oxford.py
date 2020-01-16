@@ -240,7 +240,7 @@ class OxfordEngDict(DictionaryAbstract):
                 'error': self.error_codes.LEMMA_MISSING_PRONUNCIATION
             }
             err_msg = (
-                f'Get word pronunciation error: word={word}, '
+                f'Get word pronunciation error: word={word}, lemma={lemma} '
                 f'oxford_pos={oxford_pos}, treebank_pos={treebank_pos}, '
                 f'result={result}, lemma_pronunciation={lemma_pronunciation}'
             )
@@ -413,7 +413,7 @@ class OxfordEngDict(DictionaryAbstract):
                 lemma_pronunciation[-1] in (
                     'v', 'ð', 'z', 'ʒ', 'b', 'g', 'w', 'r', 'j',
                     'l', 'm', 'n', 'ŋ',
-                    'ʌ', 'ɪ', 'ʊ', 'e', 'a', 'ɒ', 'i', 'o', 'u', 'y'
+                    'ʌ', 'ɪ', 'ʊ', 'e', 'a', 'ɒ', 'i', 'o', 'u', 'y', 'ə'
                 )
                 or
                 lemma_pronunciation[-2:] in (
