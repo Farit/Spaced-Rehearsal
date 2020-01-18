@@ -7,7 +7,7 @@ class Formatting:
     I discovered the /reasons/ behind needing the \001 and \002 escapes.
     Thought I'd log the links here for posterity sake:
       - To color something in on a color capable terminal console you just
-        need to use the "\033[<color code>m" escape sequence.
+        need to use the "\u001b[<color code>m" escape sequence.
         This would be sufficient[1]
       - However readline messes up the line width calculation because it
         measures the escape sequences as a characters too. To avoid this you
@@ -32,17 +32,18 @@ class Formatting:
         formatting.red('hello', is_escape_seq=True)
 
     """
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    WHITE = '\033[37m'
-    LIGHT_BLUE = '\033[1;34m'
-    PURPLE = '\033[35m'
-    GREY = '\033[1;30m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    # \u001b - ESCAPE unicode character
+    RED = '\u001b[31m'
+    GREEN = '\u001b[32m'
+    YELLOW = '\u001b[33m'
+    BLUE = '\u001b[34m'
+    WHITE = '\u001b[37m'
+    LIGHT_BLUE = '\u001b[1;34m'
+    PURPLE = '\u001b[35m'
+    GREY = '\u001b[90m'
+    END = '\u001b[0m'
+    BOLD = '\u001b[1m'
+    UNDERLINE = '\u001b[4m'
 
     def white(self, text, is_escape_seq=False):
         return self._wrap(text, colour=self.WHITE, is_escape_seq=is_escape_seq)
