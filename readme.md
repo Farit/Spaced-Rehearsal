@@ -16,13 +16,13 @@ browser and go to the **localhost:8888.**
 ![Alt Text](https://github.com/Farit/Spaced-Rehearsal/raw/master/review_demo.png)
 
 
-## Installation.
+## Installation
 
 1. Install pyenv
 2. Install pipenv
-3. Create virtual environment using pipenv with python version >= 3.6.
+3. Create virtual environment using pipenv with python version 3.8.1
     ```shell script
-        pipenv --python $PYENV_DIR/versions/x.y.z/bin/python
+        pipenv --python $PYENV_DIR/versions/3.8.1/bin/python
     ```
 4. Install required packages from Pipfile.
     ```shell script
@@ -48,8 +48,8 @@ in sqlite database (you can find database name in a configuration file)
 ### English specific functionality.
 
 By starting the program with the following command:
-   ```
-   python3.6 run.py english-mediator
+   ```shell script
+   pipenv run python run.py english-mediator
    ```
 
 you start the program with english functionality. This mode dedicated to 
