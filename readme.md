@@ -33,11 +33,12 @@ browser and go to the **localhost:8888.**
         pipenv run python -m nltk.downloader punkt averaged_perceptron_tagger
     ```
 6. Install **libVLC**
-python-vlc package is Python bindings for libVLC. Without libVLC, it won't be able to use python-vlc package, 
-because all it does is try to load that library (a .dylib, .so, or .dll, depending on your platform) and 
-call functions out of it. If python-vlc could't load that library it would output the following error:
-`OSError: dlopen(libvlccore.dylib, 6): image not found`
-The easiest way to get libVLC library is to just install the VLC player.
+
+    python-vlc package is Python bindings for libVLC. Without libVLC, it won't be able to use python-vlc package, 
+    because all it does is try to load that library (a .dylib, .so, or .dll, depending on your platform) and 
+    call functions out of it. If python-vlc could't load that library it would output the following error:
+    `OSError: dlopen(libvlccore.dylib, 6): image not found`
+    The easiest way to get libVLC library is to just install the VLC player.
     
 
 ## How to run the program?
