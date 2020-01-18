@@ -19,7 +19,9 @@ browser and go to the **localhost:8888.**
 ## Installation
 
 1. Install pyenv
+    - On Mac `brew cask install pyenv`
 2. Install pipenv
+    - On Mac `brew cask install pipenv`
 3. Create virtual environment using pipenv with python version 3.8.1
     ```shell script
         pipenv --python $PYENV_DIR/versions/3.8.1/bin/python
@@ -39,6 +41,8 @@ browser and go to the **localhost:8888.**
     call functions out of it. If python-vlc could't load that library it would output the following error:
     `OSError: dlopen(libvlccore.dylib, 6): image not found`
     The easiest way to get libVLC library is to just install the VLC player.
+    
+    - On Mac `brew cask install vlc`
     
 
 ## How to run the program?
