@@ -34,7 +34,7 @@ browser and go to the **localhost:8888.**
     ```
 6. Install **libVLC**
 
-    python-vlc package is Python bindings for libVLC. Without libVLC, it won't be able to use python-vlc package, 
+    python-vlc package is Python bindings for libVLC. Without libVLC the python-vlc package won't work, 
     because all it does is try to load that library (a .dylib, .so, or .dll, depending on your platform) and 
     call functions out of it. If python-vlc could't load that library it would output the following error:
     `OSError: dlopen(libvlccore.dylib, 6): image not found`
