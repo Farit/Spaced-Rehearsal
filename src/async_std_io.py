@@ -87,12 +87,12 @@ class AsyncStdIO:
 
             # ANSI escape sequence.
             if re.match(self.ansi_escape_codes, item):
-                yield (item, 'ansi_esc')
+                yield item, 'ansi_esc'
                 continue
 
             # Regular symbol.
             for i in item:
-                yield (i, 'regular')
+                yield i, 'regular'
 
     async def print(self, *msgs, bottom_margin=0):
         ansi_wrapped_lines = []
@@ -141,7 +141,7 @@ class AsyncStdIO:
                 ansi_wrapped_lines[-1].append((ansi_text_sym, ansi_sym_type))
 
         last_ansi_esp_control = ''
-        message = self.formatting.white(f'...: ', is_escape_seq=True)
+        message = self.formatting.white(f'...: ')
         for ind, ansi_line in enumerate(ansi_wrapped_lines, start=1):
             msg = ''
             for char, char_type in ansi_line:
@@ -151,11 +151,11 @@ class AsyncStdIO:
 
             message += msg
             if ind != len(ansi_wrapped_lines):
-                message += self.formatting.white(f'\n...: ', is_escape_seq=True)
+                message += self.formatting.white(f'\n...: ')
                 message += last_ansi_esp_control
 
         for _ in range(bottom_margin):
-            message += self.formatting.white(f'\n...: ', is_escape_seq=True)
+            message += self.formatting.white(f'\n...: ')
 
         message = f'{message}\n'
 
@@ -165,7 +165,7 @@ class AsyncStdIO:
         await asyncio.sleep(self.wait_timeout)
 
     async def input(self, msg, pre_fill='', history=None):
-        message = self.formatting.grey(f'[{msg}] ->: ', is_escape_seq=True)
+        message = self.formatting.grey(f'[{msg}] ->: ', is_escape_color_codes=True)
         future = self.loop.run_in_executor(
             None, self.blocking_input, message, pre_fill, history
         )
