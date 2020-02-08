@@ -1,3 +1,4 @@
+import os.path
 import logging
 import textwrap
 
@@ -158,3 +159,13 @@ class Flashcard:
             ('review_version', self.review_version),
             ('created', self.created),
         ])
+
+    def is_audio_type(self):
+        if self.question.lower().startswith('__audio__'):
+            return True
+        return False
+
+    def get_audio_file(self, parent_dir):
+        if self.is_audio_type():
+            _timestamp = self.question.lstrip('__AUDIO__')
+            return os.path.join(parent_dir, self.question)

@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from itertools import groupby
 from typing import List
+from itertools import zip_longest
 
 from src.flashcard import Flashcard, FlashcardContainer
 from src.utils import (
@@ -250,15 +251,38 @@ class DBSession:
             }
         )
 
+        text_flashcards = []
+        audio_flashcards = []
+        for _flashcard in flashcards:
+            if _flashcard.is_audio_type():
+                audio_flashcards.append(_flashcard)
+            else:
+                text_flashcards.append(_flashcard)
+
+        def _shuffle(flashcards):
+            group_by_date = groupby(
+                flashcards,
+                key=lambda f: (f['review_version'], f['review_timestamp'].date())
+            )
+            shuffled_flashcards = []
+            for key, data in group_by_date:
+                flashcards_by_date = list(data)
+                random.shuffle(flashcards_by_date)
+                shuffled_flashcards.extend(flashcards_by_date)
+            return shuffled_flashcards
+
+        shuffled_audio_flashcards = _shuffle(audio_flashcards)
+        shuffled_text_flashcards = _shuffle(text_flashcards)
+
         flashcard_container = FlashcardContainer()
-        group_by_date = groupby(
-            flashcards,
-            key=lambda f: (f['review_version'], f['review_timestamp'].date())
+        _zip_audio_text = zip_longest(
+            shuffled_audio_flashcards, shuffled_text_flashcards
         )
-        for key, data in group_by_date:
-            flashcards_by_date = list(data)
-            random.shuffle(flashcards_by_date)
-            flashcard_container.extend(flashcards_by_date)
+        for audio_f, text_f in _zip_audio_text:
+            if text_f:
+                flashcard_container.add(text_f)
+            if audio_f:
+                flashcard_container.add(audio_f)
 
         return flashcard_container
 

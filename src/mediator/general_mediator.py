@@ -58,6 +58,9 @@ class GeneralMediator:
     def make_delete_action(self):
         return GeneralDeleteAction(mediator=self)
 
+    async def set_sigint_handler(self):
+        await self.review_action.sigint_handler()
+
     async def launch_review_action(self):
         await self.review_action.launch()
 

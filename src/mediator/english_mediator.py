@@ -43,6 +43,9 @@ class EnglishMediator(GeneralMediator):
     def make_alter_action(self):
         return EnglishAlterAction(mediator=self)
 
+    def get_audio_dir(self):
+        return self.project_root_path.joinpath(f'audio/{self.name()}')
+
     async def exit(self):
         await super().exit()
         if self.dictionary:
@@ -50,59 +53,15 @@ class EnglishMediator(GeneralMediator):
 
     async def update_flashcard(self, flashcard: Flashcard):
         await super().update_flashcard(flashcard=flashcard)
-        self._remove_audio_pronunciation(flashcard)
 
     async def delete_flashcard(self, flashcard: Flashcard):
         await super().delete_flashcard(flashcard=flashcard)
-        self._remove_audio_pronunciation(flashcard)
+        if flashcard.is_audio_type():
+            audio_file = flashcard.get_audio_file(parent_dir=self.get_audio_dir())
+            os.remove(str(audio_file))
 
-    async def play_audio_answer(self, flashcard):
-        audio_file_path = self._form_audio_answer_file_path(flashcard)
-        if audio_file_path.exists():
-            self.media_player.play(str(audio_file_path))
-            return
-
-        if self.text_to_speech is None:
-            await self.print(
-                'Text to speech module is not active.',
-                bottom_margin=1
-            )
-            return
-
-        await self.print('Downloading audio answer...')
-
-        file_data = await self.text_to_speech.synthesize_audio(
-            text=flashcard.answer
-        )
-
-        if file_data:
-            fp = self._form_audio_answer_file_path(flashcard)
-            fp.parent.mkdir(parents=True, exist_ok=True)
-            fp.write_bytes(file_data)
-
-            await self.print(f'Saved audio answer:')
-            relative_file_path = fp.relative_to(self.project_root_path)
-            await self.print(f'    File path: {relative_file_path}')
-            file_size = get_human_readable_file_size(fp.stat().st_size)
-            await self.print(f'    File size: {file_size}', bottom_margin=1)
-            self.media_player.play(str(audio_file_path))
-        else:
-            await self.print(f"Couldn't get audio answer", bottom_margin=1)
-
-    def _remove_audio_pronunciation(self, flashcard):
-        fp = self._form_audio_answer_file_path(flashcard)
-        if fp.exists():
-            os.remove(str(fp))
-            os.rmdir(str(fp.parent))
-
-    def _form_audio_answer_file_path(self, flashcard) -> pathlib.Path:
-        db_name = self.config['database']['name'].replace('.', '_')
-        mediator_name = self.name()
-        fid = flashcard.id
-        file_name = f'audio_{fid}.mp3'
-        return self.project_root_path.joinpath(
-            f'audio/{db_name}/{mediator_name}/{fid}/{file_name}'
-        )
+    async def play_audio(self, audio_file_path):
+        self.media_player.play(str(audio_file_path))
 
     async def input_phonetic_transcription(
         self, flashcard_answer, curr_ans_pronunciation=None

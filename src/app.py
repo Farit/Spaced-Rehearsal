@@ -16,8 +16,8 @@ class SpacedRehearsal:
         self.loop = asyncio.get_event_loop()
         self.mediator = mediator
         self.web_app = WebApp(flashcard_type=self.mediator.name())
-        self.set_signal_handler('sigint')
-        self.set_signal_handler('sigterm')
+        self.set_signal_handler(signal.SIGINT)
+        self.set_signal_handler(signal.SIGTERM)
 
     def run(self):
         try:
@@ -29,10 +29,13 @@ class SpacedRehearsal:
             self.loop.close()
 
     def set_signal_handler(self, signame):
-        self.loop.add_signal_handler(
-            getattr(signal, signame.upper()),
-            lambda: None
-        )
+        if signame == signal.SIGINT:
+            self.loop.add_signal_handler(
+                signame,
+                lambda: self.create_task(self.mediator.set_sigint_handler())
+            )
+        else:
+            self.loop.add_signal_handler(signame, lambda: None)
 
     def create_task(self, coroutine):
         task = asyncio.ensure_future(

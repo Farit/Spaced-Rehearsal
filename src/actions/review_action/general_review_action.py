@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 class GeneralReviewAction(AbstractBaseAction):
 
+    def __init__(self, mediator):
+        super().__init__(mediator)
+        self.current_audio_file = None
+
     @property
     def action_name(self):
         return 'review'
@@ -36,6 +40,7 @@ class GeneralReviewAction(AbstractBaseAction):
 
         finally:
             review_stat.finish()
+            self.current_audio_file = None
             await self.mediator.print(
                 'Game is over!',
                 bottom_margin=1
@@ -131,11 +136,27 @@ class GeneralReviewAction(AbstractBaseAction):
         )
         review_stat.inc_reviewed()
 
+    async def sigint_handler(self):
+        if self.current_audio_file:
+            await self.mediator.play_audio(self.current_audio_file)
+
     async def do_review_session(self, flashcard: Flashcard):
-        await self.mediator.print(
-            f'{self.mediator.format_grey("Question")}: '
-            f'{flashcard.question}'
-        )
+        if flashcard.is_audio_type():
+            await self.mediator.print(
+                f'{self.mediator.format_grey("Question")}: '
+                f' Use Ctrl+C to play the audio.'
+            )
+            audio_file = flashcard.get_audio_file(
+                parent_dir=self.mediator.get_audio_dir()
+            )
+            self.current_audio_file = audio_file
+            await self.mediator.play_audio(audio_file)
+        else:
+            await self.mediator.print(
+                f'{self.mediator.format_grey("Question")}: '
+                f'{flashcard.question}'
+            )
+
         entered_answer = await self.mediator.input_answer()
 
         entered_answer = normalize_value(
