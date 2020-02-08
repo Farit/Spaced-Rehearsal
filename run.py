@@ -20,6 +20,7 @@ site.addsitedir(project_dir)
 os.chdir(project_dir)
 
 from src.app import SpacedRehearsal
+from src.flashcard import Flashcard
 from src.mediator import (
     GeneralMediator,
     EnglishMediator,
@@ -165,6 +166,45 @@ def dump_eng_flashcards(args: argparse.Namespace):
     ))
 
 
+def create_eng_flashcards(args: argparse.Namespace):
+    async def _wrapper(loop, user, file_path):
+        logger_tu.info('Create english flashcards')
+        logger_tu.info('User: %s', user)
+        logger_tu.info('File: %s', file_path)
+
+        mediator = EnglishMediator()
+        is_login = await mediator.login_user(user)
+        if not is_login:
+            sys.exit(f'Failed to login user: {user}')
+
+        mediator.set_loop(loop)
+
+        with open(file_path) as fh:
+            data = json.loads(fh.read())
+        logger_tu.info(f'Loaded data: {len(data)}')
+
+        for datum in data:
+            logger_tu.info('Processing answer: %s', datum['answer'])
+            flashcard: Flashcard = Flashcard.create(
+                user_id=mediator.get_user_id(),
+                flashcard_type=mediator.name(),
+                question=datum['question'],
+                answer=datum['answer'],
+                source=datum['source'],
+                phonetic_transcription=datum['phonetic_transcription'],
+                explanation=datum['explanation'],
+                examples=json.loads(datum['examples'])
+            )
+            await mediator.save_flashcard(flashcard)
+
+    _loop = asyncio.get_event_loop()
+    _loop.run_until_complete(_wrapper(
+        loop=_loop,
+        user=args.user,
+        file_path=args.file,
+    ))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.set_defaults(func=general_mediator)
@@ -186,6 +226,11 @@ if __name__ == '__main__':
     dump_eng_flashcards_parser.add_argument('--field', required=True, choices=['source'])
     dump_eng_flashcards_parser.add_argument('--value', required=True)
     dump_eng_flashcards_parser.set_defaults(func=dump_eng_flashcards)
+
+    create_eng_flashcards_parser = subparsers.add_parser('create-english-flashcards')
+    create_eng_flashcards_parser.add_argument('--file', required=True)
+    create_eng_flashcards_parser.add_argument('--user', required=True)
+    create_eng_flashcards_parser.set_defaults(func=create_eng_flashcards)
 
     args = parser.parse_args()
     args.func(args)
