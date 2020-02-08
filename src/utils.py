@@ -167,6 +167,11 @@ log_config_as_dict = {
         #     'handlers': ['file'],
         #     'level': 'INFO'
         # },
+        'terminal_utility': {
+            'level': 'DEBUG',
+            'propagate': False,
+            'handlers': ['console_stdout_default', 'console_stderr_default'],
+        },
     }
 }
 
