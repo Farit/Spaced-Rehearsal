@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class IndexHandler(base.BaseRequestHandler):
 
     def get(self):
-        num_of_flashcards = self.db_session.count_flashcards(
+        total = self.db_session.count_flashcards(
             user_id=self.current_user['id']
         )
+        num_of_flashcards = total['text'] + total['audio']
         self.render('index.html', num_of_flashcards=num_of_flashcards)

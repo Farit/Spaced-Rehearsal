@@ -126,10 +126,14 @@ class SpacedRehearsal:
             review_number = await self.mediator.count_review_flashcards()
 
             await self.mediator.print(
-                f'Number of the flashcards: '
-                f'{self.mediator.format_bold(total_number)}',
-                f'Number of the flashcards ready to review: '
-                f'{self.mediator.format_bold(review_number)}',
+                f'Number of the text flashcards: '
+                f'{self.mediator.format_bold(total_number["text"])}',
+                f'Number of the audio flashcards: '
+                f'{self.mediator.format_bold(total_number["audio"])}',
+                f'Number of the text flashcards ready to review: '
+                f'{self.mediator.format_bold(review_number["text"])}',
+                f'Number of the audio flashcards ready to review: '
+                f'{self.mediator.format_bold(review_number["audio"])}',
                 bottom_margin=1
             )
 

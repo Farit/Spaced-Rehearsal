@@ -148,16 +148,20 @@ class DBSession:
                 (login_name, )
             )
 
-    def count_flashcards(self, user_id, review_timestamp=None) -> int:
+    def count_flashcards(self, user_id, review_timestamp=None) -> dict:
         """
         :param user_id: User identifier
         :param review_timestamp: Timestamp with a localtime zone.
         :return: Number of flashcards.
         """
         assert isinstance(review_timestamp, (datetime, type(None)))
+
+        _count_text_flashcards = 0
+        _count_audio_flashcards = 0
+
         if review_timestamp is None:
             query = self.db_cursor.execute(
-                'SELECT count(*) '
+                'SELECT question '
                 'FROM flashcards '
                 'WHERE user_id = :user_id AND '
                 '      flashcard_type = :flashcard_type; ',
@@ -168,7 +172,7 @@ class DBSession:
             )
         else:
             query = self.db_cursor.execute(
-                'SELECT count(*) '
+                'SELECT question '
                 'FROM flashcards '
                 'WHERE user_id = :user_id AND '
                 '      flashcard_type = :flashcard_type AND '
@@ -179,7 +183,18 @@ class DBSession:
                     'review': review_timestamp
                 }
             )
-        return query.fetchone()['count(*)']
+
+        for row in query.fetchall():
+            data = dict(row)
+            if data['question'].lower().startswith('__audio__'):
+                _count_audio_flashcards += 1
+            else:
+                _count_text_flashcards += 1
+
+        return {
+            'text': _count_text_flashcards,
+            'audio': _count_audio_flashcards
+        }
 
     def _get_flashcards(
             self, request: str, request_params: dict=None

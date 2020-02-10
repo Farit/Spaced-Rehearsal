@@ -133,17 +133,13 @@ class GeneralMediator:
         return result
 
     async def count_total_flashcards(self):
-        total_number = self.db_session.count_flashcards(
-            user_id=self.get_user_id()
-        )
-        return total_number
+        return self.db_session.count_flashcards(user_id=self.get_user_id())
 
     async def count_review_flashcards(self):
-        review_number = self.db_session.count_flashcards(
+        return self.db_session.count_flashcards(
             user_id=self.get_user_id(),
             review_timestamp=datetime_now()
         )
-        return review_number
 
     async def get_prev_review_timestamp(self, flashcard):
         previous_review_timestamp = self.db_session.get_prev_review_timestamp(
