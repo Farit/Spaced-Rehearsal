@@ -41,42 +41,44 @@ class GeneralDeleteAction(AbstractBaseAction):
 
             # Delete chosen flashcard.
             flashcard: Flashcard = flashcard_container.get(flashcard_id=action)
+            await self.delete_flashcard(flashcard)
+            break
+
+    async def delete_flashcard(self, flashcard):
+        await self.mediator.print(
+            'Deleting flashcard',
+            bottom_margin=1,
+            bold=True
+        )
+        await self.mediator.print_flashcard(
+            flashcard,
+            colour_func=self.mediator.format_red,
+            bottom_margin=1
+        )
+
+        confirmed: bool = await self.mediator.input_confirmation(
+            'Do you want to delete'
+        )
+        if confirmed:
+            await self.mediator.delete_flashcard(flashcard)
             await self.mediator.print(
-                'Deleting flashcard',
+                'Deleted flashcard',
                 bottom_margin=1,
                 bold=True
             )
             await self.mediator.print_flashcard(
-                flashcard,
+                flashcard=flashcard,
                 colour_func=self.mediator.format_red,
-                bottom_margin=1
+                bottom_margin=1,
+                include_fields=[
+                    Flashcard.flashcard_id,
+                    Flashcard.question,
+                    Flashcard.answer
+                ]
             )
-
-            confirmed: bool = await self.mediator.input_confirmation(
-                'Do you want to delete'
+        else:
+            await self.mediator.print(
+                'Aborting deleting',
+                bottom_margin=1,
+                red=True
             )
-            if confirmed:
-                await self.mediator.delete_flashcard(flashcard)
-                await self.mediator.print(
-                    'Deleted flashcard',
-                    bottom_margin=1,
-                    bold=True
-                )
-                await self.mediator.print_flashcard(
-                    flashcard=flashcard,
-                    colour_func=self.mediator.format_red,
-                    bottom_margin=1,
-                    include_fields=[
-                        Flashcard.flashcard_id,
-                        Flashcard.question,
-                        Flashcard.answer
-                    ]
-                )
-            else:
-                await self.mediator.print(
-                    'Aborting deleting',
-                    bottom_margin=1,
-                    red=True
-                )
-
-            break

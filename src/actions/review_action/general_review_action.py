@@ -7,6 +7,7 @@ from src.utils import datetime_now, normalize_value
 from src.actions.abstract_base_action import AbstractBaseAction
 from src.flashcard import FlashcardContainer, Flashcard
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
+from src.actions.delete_action.general_delete_action import GeneralDeleteAction
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +33,32 @@ class GeneralReviewAction(AbstractBaseAction):
 
         try:
             for ind, flashcard in enumerate(flashcard_container, start=1):
-                can_continue = await self.process_flashcard(
-                    ind, flashcard, review_stat
+                await self.process_flashcard(ind, flashcard, review_stat)
+
+                action = await self.mediator.input_action(
+                    action_answers=['y', 'n', 'd'],
+                    action_msgs=[
+                        f'Do you want to continue? '
+                        f'[{self.mediator.format_green("y")}/'
+                        f'{self.mediator.format_red("n")}] ',
+                        f'Do you want to delete the flashcard? '
+                        f'[{self.mediator.format_red("d")}] '
+                    ]
                 )
-                if not can_continue:
+                if action == 'y':
+                    continue
+
+                if action == 'n':
+                    break
+
+                await GeneralDeleteAction(mediator=self.mediator).delete_flashcard(
+                    flashcard
+                )
+
+                confirmed: bool = await self.mediator.input_confirmation(
+                    'Do you want to continue review?'
+                )
+                if not confirmed:
                     break
 
         finally:
@@ -69,13 +92,6 @@ class GeneralReviewAction(AbstractBaseAction):
             bold=True
         )
         await self.make_review(flashcard, review_stat)
-
-        confirmed: bool = await self.mediator.input_confirmation(
-            'Do you want to continue?'
-        )
-        if not confirmed:
-            return False
-        return True
 
     async def make_review(self, flashcard: Flashcard, review_stat):
         previous_review_timestamp = await self.mediator.get_prev_review_timestamp(
