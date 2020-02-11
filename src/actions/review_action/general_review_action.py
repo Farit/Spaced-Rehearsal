@@ -8,6 +8,7 @@ from src.actions.abstract_base_action import AbstractBaseAction
 from src.flashcard import FlashcardContainer, Flashcard
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
 from src.actions.delete_action.general_delete_action import GeneralDeleteAction
+from src.actions.alter_action.general_alter_action import GeneralAlterAction
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +37,13 @@ class GeneralReviewAction(AbstractBaseAction):
                 await self.process_flashcard(ind, flashcard, review_stat)
 
                 action = await self.mediator.input_action(
-                    action_answers=['y', 'n', 'd'],
+                    action_answers=['y', 'n', 'a', 'd'],
                     action_msgs=[
                         f'Do you want to continue? '
                         f'[{self.mediator.format_green("y")}/'
                         f'{self.mediator.format_red("n")}] ',
+                        f'Do you want to alter the flashcard? '
+                        f'[{self.mediator.format_light_blue("a")}] ',
                         f'Do you want to delete the flashcard? '
                         f'[{self.mediator.format_red("d")}] '
                     ]
@@ -51,9 +54,13 @@ class GeneralReviewAction(AbstractBaseAction):
                 if action == 'n':
                     break
 
-                await GeneralDeleteAction(mediator=self.mediator).delete_flashcard(
-                    flashcard
-                )
+                if action == 'a':
+                    alter_action = GeneralAlterAction(mediator=self.mediator)
+                    await alter_action.alter_flashcard(flashcard)
+
+                if action == 'd':
+                    delete_action = GeneralDeleteAction(mediator=self.mediator)
+                    await delete_action.delete_flashcard(flashcard)
 
                 confirmed: bool = await self.mediator.input_confirmation(
                     'Do you want to continue review?'
