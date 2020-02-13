@@ -1,3 +1,6 @@
+import os.path
+import pathlib
+
 from datetime import datetime
 
 from src.actions import (
@@ -35,6 +38,11 @@ class GeneralMediator:
         self.search_action = self.make_search_action()
         self.delete_action = self.make_delete_action()
 
+        # Set project root path.
+        current_dir = os.path.dirname(__file__)
+        root = os.path.abspath(os.path.join(current_dir, '../..'))
+        self.project_root_path = pathlib.Path(root)
+
     @classmethod
     def name(cls):
         return 'general'
@@ -57,6 +65,9 @@ class GeneralMediator:
     
     def make_delete_action(self):
         return GeneralDeleteAction(mediator=self)
+
+    def get_audio_dir(self):
+        return self.project_root_path.joinpath(f'audio/{self.name()}')
 
     async def set_sigint_handler(self):
         await self.review_action.sigint_handler()

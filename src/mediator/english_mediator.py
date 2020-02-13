@@ -1,13 +1,10 @@
 import os
-import pathlib
 import os.path
 
 from typing import List
 
 from src.mediator.general_mediator import GeneralMediator
 from src.flashcard import Flashcard
-from src.media_player import Player
-from src.utils import get_human_readable_file_size, normalize_eng_word
 
 from src.actions import (
     EnglishReviewAction,
@@ -23,12 +20,6 @@ class EnglishMediator(GeneralMediator):
         super().__init__()
         self.dictionary = dictionary
         self.text_to_speech = text_to_speech
-        self.media_player = Player()
-
-        # Set project root path.
-        current_dir = os.path.dirname(__file__)
-        root = os.path.abspath(os.path.join(current_dir, '../..'))
-        self.project_root_path = pathlib.Path(root)
 
     @classmethod
     def name(cls):
@@ -43,9 +34,6 @@ class EnglishMediator(GeneralMediator):
     def make_alter_action(self):
         return EnglishAlterAction(mediator=self)
 
-    def get_audio_dir(self):
-        return self.project_root_path.joinpath(f'audio/{self.name()}')
-
     async def exit(self):
         await super().exit()
         if self.dictionary:
@@ -59,9 +47,6 @@ class EnglishMediator(GeneralMediator):
         if flashcard.is_audio_type():
             audio_file = flashcard.get_audio_file(parent_dir=self.get_audio_dir())
             os.remove(str(audio_file))
-
-    async def play_audio(self, audio_file_path):
-        self.media_player.play(str(audio_file_path))
 
     async def input_phonetic_transcription(
         self, flashcard_answer, curr_ans_pronunciation=None

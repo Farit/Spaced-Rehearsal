@@ -3,6 +3,7 @@ import logging
 
 from datetime import datetime
 
+from src.media_player import VLCPlayer
 from src.utils import datetime_now, normalize_value
 from src.actions.abstract_base_action import AbstractBaseAction
 from src.flashcard import FlashcardContainer, Flashcard
@@ -17,7 +18,7 @@ class GeneralReviewAction(AbstractBaseAction):
 
     def __init__(self, mediator):
         super().__init__(mediator)
-        self.current_audio_file = None
+        self.media_player = VLCPlayer()
 
     @property
     def action_name(self):
@@ -34,6 +35,13 @@ class GeneralReviewAction(AbstractBaseAction):
 
         try:
             for ind, flashcard in enumerate(flashcard_container, start=1):
+
+                if flashcard.is_audio_type():
+                    audio_file = flashcard.get_audio_file(
+                        parent_dir=self.mediator.get_audio_dir()
+                    )
+                    self.media_player.create_media(audio_file)
+
                 await self.process_flashcard(ind, flashcard, review_stat)
 
                 action = await self.mediator.input_action(
@@ -48,6 +56,10 @@ class GeneralReviewAction(AbstractBaseAction):
                         f'[{self.mediator.format_red("d")}] '
                     ]
                 )
+
+                self.media_player.stop()
+                self.media_player.erase_media()
+
                 if action == 'y':
                     continue
 
@@ -70,7 +82,6 @@ class GeneralReviewAction(AbstractBaseAction):
 
         finally:
             review_stat.finish()
-            self.current_audio_file = None
             await self.mediator.print(
                 'Game is over!',
                 bottom_margin=1
@@ -160,8 +171,8 @@ class GeneralReviewAction(AbstractBaseAction):
         review_stat.inc_reviewed()
 
     async def sigint_handler(self):
-        if self.current_audio_file:
-            await self.mediator.play_audio(self.current_audio_file)
+        if not self.media_player.is_playing():
+            self.media_player.play()
 
     async def do_review_session(self, flashcard: Flashcard):
         if flashcard.is_audio_type():
@@ -169,11 +180,7 @@ class GeneralReviewAction(AbstractBaseAction):
                 f'{self.mediator.format_grey("Question")}: '
                 f' Use Ctrl+C to play the audio.'
             )
-            audio_file = flashcard.get_audio_file(
-                parent_dir=self.mediator.get_audio_dir()
-            )
-            self.current_audio_file = audio_file
-            await self.mediator.play_audio(audio_file)
+            self.media_player.play()
         else:
             await self.mediator.print(
                 f'{self.mediator.format_grey("Question")}: '
@@ -181,6 +188,9 @@ class GeneralReviewAction(AbstractBaseAction):
             )
 
         entered_answer = await self.mediator.input_answer()
+
+        if flashcard.is_audio_type():
+            self.media_player.stop()
 
         entered_answer = normalize_value(
             entered_answer, remove_trailing='.', to_lower=True

@@ -95,7 +95,7 @@ class GeneralAlterAction(AbstractBaseAction):
             )
         else:
             question = flashcard.question
-            
+
         answer = await self.mediator.input_answer(
             pre_fill=flashcard.answer
         )
