@@ -9,7 +9,9 @@ class VLCPlayer:
 
     def __init__(self):
         # creating a basic vlc instance
-        self._instance = vlc.Instance()
+        self._instance = vlc.Instance([
+            "--file-caching=10000 --disc-caching=10000"
+        ])
         # creating an empty vlc media player
         self.media_player = self._instance.media_player_new()
         self.media = None
