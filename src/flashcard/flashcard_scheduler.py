@@ -9,7 +9,7 @@ class FlashcardScheduler:
 
     @staticmethod
     def to_init(flashcard_answer):
-        initial_timedelta_sec = 3600
+        initial_timedelta_sec = 24 * 60 * 60
         delta_sec = initial_timedelta_sec / math.log(len(flashcard_answer))
         review_timestamp = datetime_now() + timedelta(
             seconds=initial_timedelta_sec + delta_sec
