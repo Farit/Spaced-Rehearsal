@@ -193,7 +193,7 @@ def create_audio_eng_flashcards(args: argparse.Namespace):
                 if file_path.suffix in ['.mp3']:
                     data.append({
                         'audio_file_path': file_path,
-                        'text_file_path': file_path.with_suffix('.txt'),
+                        'json_file_path': file_path.with_suffix('.json'),
                     })
 
         for datum in data:
@@ -209,16 +209,31 @@ def create_audio_eng_flashcards(args: argparse.Namespace):
             shutil.copy(datum['audio_file_path'], flashcard_audio_file_path)
 
             question = file_name
-            with open(datum['text_file_path']) as fh:
-                answer = fh.read().strip().capitalize()
+            with open(datum['json_file_path']) as fh:
+                json_data = json.load(fh)
 
-            logger_tu.info('Processing %s answer: %s', question, answer)
+            logger_tu.info(
+                'Processing %s answer: %s', question, json_data['answer']
+            )
+            # Save as audio flashcard
             flashcard: Flashcard = Flashcard.create(
                 user_id=mediator.get_user_id(),
                 flashcard_type=mediator.name(),
                 question=question,
-                answer=answer,
-                source=source
+                answer=json_data['answer'].strip().capitalize(),
+                source=source,
+                explanation=json_data['explanation']
+            )
+            await mediator.save_flashcard(flashcard)
+
+            # Save as text flashcard
+            flashcard: Flashcard = Flashcard.create(
+                user_id=mediator.get_user_id(),
+                flashcard_type=mediator.name(),
+                question=json_data['question'],
+                answer=json_data['answer'],
+                source=source,
+                explanation=json_data['explanation']
             )
             await mediator.save_flashcard(flashcard)
 
@@ -293,10 +308,16 @@ if __name__ == '__main__':
         Directory structure example:
             rudy_film/
             ├── 340.mp3
-            ├── 340.txt
+            ├── 340.json
             ├── 352.mp3
-            └── 352.txt
-        ''')
+            └── 352.json
+        Json file example:
+        {
+            "question": "...",
+            "answer": "...",
+            "explanation": "..."
+        }
+         ''')
     )
     create_audio_eng_flashcards_parser.add_argument('--dir-path', required=True)
     create_audio_eng_flashcards_parser.add_argument('--user', required=True)
