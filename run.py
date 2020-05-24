@@ -266,7 +266,22 @@ if __name__ == '__main__':
     )
     dump_eng_flashcards_parser.set_defaults(func=dump_eng_flashcards)
 
-    create_eng_flashcards_parser = subparsers.add_parser('create-english-flashcards')
+    create_eng_flashcards_parser = subparsers.add_parser(
+        'create-english-flashcards',
+        help='''
+        Creates english flashcards by loading the file:
+        [
+            {
+                "question": "Я поймал его на прослушивании нашего разговора. (Use past simple)",
+                "answer": "I caught him eavesdropping on our conversation.",
+                "source": "English phrases v0.5.",
+                "phonetic_transcription": "I caught",
+                "explanation": "[eavesdrop] to deliberately listen secretly to other people’s conversations.",
+                "examples": "[\"Sue was able to eavesdrop on them through the open window.\"]"
+            }
+        ]
+        '''
+    )
     create_eng_flashcards_parser.add_argument('--file', required=True)
     create_eng_flashcards_parser.add_argument('--user', required=True)
     create_eng_flashcards_parser.set_defaults(func=create_eng_flashcards)
