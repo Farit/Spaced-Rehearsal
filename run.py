@@ -244,10 +244,26 @@ if __name__ == '__main__':
     eng_rus_mediator_parser.add_argument('--dictionary', choices=['oxford'])
     eng_rus_mediator_parser.set_defaults(func=eng_rus_mediator)
 
-    dump_eng_flashcards_parser = subparsers.add_parser('dump-english-flashcards')
-    dump_eng_flashcards_parser.add_argument('--user', required=True)
-    dump_eng_flashcards_parser.add_argument('--field', required=True, choices=['source'])
-    dump_eng_flashcards_parser.add_argument('--value', required=True)
+    dump_eng_flashcards_parser = subparsers.add_parser(
+        'dump-english-flashcards',
+        help='''
+        Dump English flashcards by specifying field name and its value.
+        pipenv run python run.py dump-english-flashcards --user farit
+        --field source --value "English phrases v0.5."
+        '''
+    )
+    dump_eng_flashcards_parser.add_argument(
+        '--user', required=True,
+        help='Enter user name.'
+    )
+    dump_eng_flashcards_parser.add_argument(
+        '--field', required=True, choices=['source'],
+        help='Dumps flashcards by considering this field.'
+    )
+    dump_eng_flashcards_parser.add_argument(
+        '--value', required=True,
+        help='Field should have this value to be dumped.'
+    )
     dump_eng_flashcards_parser.set_defaults(func=dump_eng_flashcards)
 
     create_eng_flashcards_parser = subparsers.add_parser('create-english-flashcards')
