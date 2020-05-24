@@ -31,9 +31,6 @@ from src.mediator import (
 from src.dictionary import (
     OxfordEngDict
 )
-from src.text_to_speech import (
-    IBM_EngTextToSpeech
-)
 from src.utils import log_config_as_dict
 from src.config import ConfigAdapter
 from src.formatting import Formatting
@@ -71,33 +68,6 @@ def get_dictionary(args: argparse.Namespace):
     return dictionary
 
 
-def get_text_to_speech(args: argparse.Namespace):
-    config = ConfigAdapter(filename='config.cfg')
-    text_to_speech = None
-    if args.text_to_speech == 'ibm':
-        auth_username = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_USERNAME')
-        auth_password = os.getenv('IBM_TEXT_TO_SPEECH_AUTH_PASSWORD')
-        api_base_url = config['text_to_speech']['ibm_api_url']
-        text_to_speech = IBM_EngTextToSpeech(
-            api_base_url=api_base_url,
-            auth_username=auth_username,
-            auth_password=auth_password
-        )
-
-        loop = asyncio.new_event_loop()
-        res = loop.run_until_complete(text_to_speech.check_connection())
-        loop.close()
-        if not res['is_success']:
-            formatting = Formatting()
-            msg = formatting.red(
-                'IBM text to speech API connection check failed.\n'
-                'Please verify your internet connection or api credentials.'
-            )
-            print(msg)
-            text_to_speech = None
-    return text_to_speech
-
-
 def general_mediator(args: argparse.Namespace):
     mediator = GeneralMediator()
     spaced_rehearsal = SpacedRehearsal(mediator=mediator)
@@ -105,19 +75,13 @@ def general_mediator(args: argparse.Namespace):
 
 
 def english_mediator(args: argparse.Namespace):
-    mediator = EnglishMediator(
-        dictionary=get_dictionary(args),
-        text_to_speech=get_text_to_speech(args)
-    )
+    mediator = EnglishMediator(dictionary=get_dictionary(args))
     spaced_rehearsal = SpacedRehearsal(mediator=mediator)
     spaced_rehearsal.run()
 
 
 def eng_rus_mediator(args: argparse.Namespace):
-    mediator = EnglishRussianMediator(
-        dictionary=get_dictionary(args),
-        text_to_speech=get_text_to_speech(args)
-    )
+    mediator = EnglishRussianMediator(dictionary=get_dictionary(args))
     spaced_rehearsal = SpacedRehearsal(mediator=mediator)
     spaced_rehearsal.run()
 
@@ -274,12 +238,10 @@ if __name__ == '__main__':
 
     english_mediator_parser = subparsers.add_parser('english-mediator')
     english_mediator_parser.add_argument('--dictionary', choices=['oxford'])
-    english_mediator_parser.add_argument('--text-to-speech', choices=['ibm'])
     english_mediator_parser.set_defaults(func=english_mediator)
 
     eng_rus_mediator_parser = subparsers.add_parser('eng-rus-mediator')
     eng_rus_mediator_parser.add_argument('--dictionary', choices=['oxford'])
-    eng_rus_mediator_parser.add_argument('--text-to-speech', choices=['ibm'])
     eng_rus_mediator_parser.set_defaults(func=eng_rus_mediator)
 
     dump_eng_flashcards_parser = subparsers.add_parser('dump-english-flashcards')

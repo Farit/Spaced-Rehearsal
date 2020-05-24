@@ -16,10 +16,9 @@ from src.actions import (
 
 class EnglishMediator(GeneralMediator):
 
-    def __init__(self, dictionary=None, text_to_speech=None):
+    def __init__(self, dictionary=None):
         super().__init__()
         self.dictionary = dictionary
-        self.text_to_speech = text_to_speech
 
     @classmethod
     def name(cls):
