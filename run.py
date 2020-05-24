@@ -10,6 +10,7 @@ import os.path
 import argparse
 import logging
 import logging.config
+import textwrap
 import site
 
 from datetime import datetime
@@ -231,7 +232,7 @@ def create_audio_eng_flashcards(args: argparse.Namespace):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.set_defaults(func=general_mediator)
 
     subparsers = parser.add_subparsers()
@@ -246,11 +247,11 @@ if __name__ == '__main__':
 
     dump_eng_flashcards_parser = subparsers.add_parser(
         'dump-english-flashcards',
-        help='''
+        help=textwrap.dedent('''
         Dump English flashcards by specifying field name and its value.
         pipenv run python run.py dump-english-flashcards --user farit
         --field source --value "English phrases v0.5."
-        '''
+        ''')
     )
     dump_eng_flashcards_parser.add_argument(
         '--user', required=True,
@@ -268,7 +269,7 @@ if __name__ == '__main__':
 
     create_eng_flashcards_parser = subparsers.add_parser(
         'create-english-flashcards',
-        help='''
+        help=textwrap.dedent('''
         Creates english flashcards by loading the file:
         [
             {
@@ -280,13 +281,23 @@ if __name__ == '__main__':
                 "examples": "[\"Sue was able to eavesdrop on them through the open window.\"]"
             }
         ]
-        '''
+        ''')
     )
     create_eng_flashcards_parser.add_argument('--file', required=True)
     create_eng_flashcards_parser.add_argument('--user', required=True)
     create_eng_flashcards_parser.set_defaults(func=create_eng_flashcards)
 
-    create_audio_eng_flashcards_parser = subparsers.add_parser('create-audio-eng-flashcards')
+    create_audio_eng_flashcards_parser = subparsers.add_parser(
+        'create-audio-eng-flashcards',
+        help=textwrap.dedent('''
+        Directory structure example:
+            rudy_film/
+            ├── 340.mp3
+            ├── 340.txt
+            ├── 352.mp3
+            └── 352.txt
+        ''')
+    )
     create_audio_eng_flashcards_parser.add_argument('--dir-path', required=True)
     create_audio_eng_flashcards_parser.add_argument('--user', required=True)
     create_audio_eng_flashcards_parser.add_argument('--source', required=True)

@@ -23,6 +23,7 @@ class VLCPlayer:
         if self.media is not None:
             if self.media_player.get_media() is None:
                 self._open_file()
+            self.media_player.stop()
             self.media_player.play()
 
     def stop(self):
