@@ -6,6 +6,10 @@ logger = logging.getLogger(__name__)
 
 
 class VLCPlayer:
+    """
+    Documentation:
+    https://www.olivieraubert.net/vlc/python-ctypes/doc/
+    """
 
     def __init__(self):
         # creating a basic vlc instance
