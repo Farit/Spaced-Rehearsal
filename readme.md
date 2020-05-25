@@ -32,7 +32,7 @@ browser and go to the **localhost:8888.**
     ```
 5. Install required nltk data.
     ```shell script
-        pipenv run python -m nltk.downloader punkt averaged_perceptron_tagger
+        pipenv run python -m nltk.downloader punkt averaged_perceptron_tagger wordnet
     ```
 6. Install **libVLC**
 
