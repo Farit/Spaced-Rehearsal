@@ -36,6 +36,7 @@ class VLCPlayer:
     def create_media(self, audio_file):
         # create the media
         self.media = self._instance.media_new(audio_file)
+        self._open_file()
 
     def erase_media(self):
         self.media = None
