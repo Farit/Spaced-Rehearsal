@@ -25,18 +25,10 @@ site.addsitedir(project_dir)
 # so that relative paths will work.
 os.chdir(project_dir)
 
-from src.flashcard import Flashcard
 from src.mediator import (
     EnglishMediator
 )
-from src.dictionary import (
-    OxfordEngDict
-)
-from src.utils import (
-    log_config_as_dict,
-    normalize_eng_word
-)
-from src.config import ConfigAdapter
+from src.utils import log_config_as_dict
 
 
 log_config_as_dict['root'] = {
