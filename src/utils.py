@@ -22,8 +22,10 @@ def normalize_eng_word(word):
     chair
     >>> print(normalize_eng_word('- . co-workers !?  '))
     co-workers
+    >>> print(normalize_eng_word(" 5 o'clock"))
+    o'clock
     """
-    return re.sub(r'(^-|-$|[^a-z-]*)', '', word.lower())
+    return re.sub(r"(^-|-$|[^'a-z-]*)", '', word.lower())
 
 
 def datetime_now():
@@ -53,6 +55,30 @@ def datetime_change_timezone(datetime_obj, *, offset):
 def convert_datetime_to_local(datetime_obj: datetime):
     if datetime_obj is not None:
         return datetime_change_timezone(datetime_obj, offset=time.timezone)
+
+
+def normalize_text(text):
+    """
+    >>> print(normalize_text('Where are the t-shirts?'))
+    where are the t-shirts
+    >>> print(normalize_text("The plane departs at 5 o'clock in the evening."))
+    the plane departs at 5 o'clock in the evening
+    >>> print(normalize_text("And people vary, too, in their susceptibility to addiction."))
+    and people vary too in their susceptibility to addiction
+    >>> print(normalize_text("The phone bill hasn't come yet."))
+    the phone bill hasn't come yet
+    """
+    text = text or ''
+    text = remove_whitespaces(text)
+    text = text.lower()
+
+    words = []
+    for word in text.split():
+        if not word.isnumeric():
+            words.append(normalize_eng_word(word))
+        else:
+            words.append(word)
+    return ' '.join(words)
 
 
 def normalize_value(value, *, remove_trailing=None, to_lower=False):

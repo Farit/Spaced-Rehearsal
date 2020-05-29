@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 from src.media_player import VLCPlayer
-from src.utils import datetime_now, normalize_value
+from src.utils import datetime_now, normalize_text
 from src.actions.abstract_base_action import AbstractBaseAction
 from src.flashcard import FlashcardContainer, Flashcard
 from src.flashcard.flashcard_scheduler import FlashcardScheduler
@@ -192,12 +192,8 @@ class GeneralReviewAction(AbstractBaseAction):
         if flashcard.is_audio_type():
             self.media_player.stop()
 
-        entered_answer = normalize_value(
-            entered_answer, remove_trailing='.', to_lower=True
-        )
-        answer_side = normalize_value(
-            flashcard.answer, remove_trailing='.', to_lower=True
-        )
+        entered_answer = normalize_text(entered_answer)
+        answer_side = normalize_text(flashcard.answer)
 
         edit_dist, entered_ans_alignment, ans_side_alignment = (
             self.compute_edit_distance(entered_answer, answer_side)
