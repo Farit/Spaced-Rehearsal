@@ -118,21 +118,32 @@ class GeneralReviewAction(AbstractBaseAction):
         current_review_timestamp = datetime_now()
 
         session_res = await self.do_review_session(flashcard)
-        if session_res['edit_dist'] != 0:
+        assert session_res['edit_dist'] >= 0, 'Edit dist. cannot be negative'
+
+        if session_res['edit_dist'] > 4:
             await self.mediator.print(
-                f'Oops! Wrong! You have one more attempt.',
+                f'Oops! You have too many errors! You have one more attempt.',
                 red=True
             )
             session_res = await self.do_review_session(flashcard)
 
-        if session_res['edit_dist'] == 0:
+        if 0 <= session_res['edit_dist'] <= 4:
             flashcard.review_timestamp = FlashcardScheduler.to_next(
                 flashcard_answer=flashcard.answer,
                 previous_review_timestamp=previous_review_timestamp
             )
             review_stat.inc_right()
-            colour_func = self.mediator.format_green
             current_result = 'success'
+            colour_func = self.mediator.format_green
+            if session_res['edit_dist'] > 0:
+                colour_func = self.mediator.format_yellow
+                await self.mediator.print(
+                    session_res['entered_ans_alignment']
+                )
+                await self.mediator.print(
+                    session_res['ans_side_alignment'],
+                    bottom_margin=1
+                )
         else:
             flashcard.review_timestamp = FlashcardScheduler.to_init(
                 flashcard_answer=flashcard.answer
